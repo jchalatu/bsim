@@ -285,22 +285,18 @@ public class BSimCapsuleBacterium {
          *            .            .  *stopped* by the RHS bound check!
          *
          */
-        //wallBelow(x1.x, x1force, new Vector3d(1,0,0));
-        //wallBelow(x1.y, x1force, new Vector3d(0,1,0)); // TOP //
+        wallBelow(x1.x, x1force, new Vector3d(1,0,0));
+        wallBelow(x1.y, x1force, new Vector3d(0,1,0)); // TOP //
         wallBelow(x1.z, x1force, new Vector3d(0,0,1));
-
-        //wallAbove(x1.x, x1force, new Vector3d(-1, 0, 0), sim.getBound().x);
-
-        //wallAbove(x1.y, x1force, new Vector3d(0, -1, 0), sim.getBound().y); // BOTTOM //
+        wallAbove(x1.x, x1force, new Vector3d(-1, 0, 0), sim.getBound().x);
+        wallAbove(x1.y, x1force, new Vector3d(0, -1, 0), sim.getBound().y); // BOTTOM //
         wallAbove(x1.z, x1force, new Vector3d(0, 0, -1), sim.getBound().z);
 
-        //wallBelow(x2.x, x2force, new Vector3d(1,0,0));
-        //wallBelow(x2.y, x2force, new Vector3d(0,1,0)); // TOP //
+        wallBelow(x2.x, x2force, new Vector3d(1,0,0));
+        wallBelow(x2.y, x2force, new Vector3d(0,1,0)); // TOP //
         wallBelow(x2.z, x2force, new Vector3d(0,0,1));
-
-        //wallAbove(x2.x, x2force, new Vector3d(-1,0,0), sim.getBound().x);
-
-        //wallAbove(x2.y, x2force, new Vector3d(0, -1, 0), sim.getBound().y); // BOTTOM //
+        wallAbove(x2.x, x2force, new Vector3d(-1,0,0), sim.getBound().x);
+        wallAbove(x2.y, x2force, new Vector3d(0, -1, 0), sim.getBound().y); // BOTTOM //
         wallAbove(x2.z, x2force, new Vector3d(0, 0, -1), sim.getBound().z);
 
 
@@ -348,7 +344,7 @@ public class BSimCapsuleBacterium {
             Vector3d wallForceVec = new Vector3d(1,0,0);
             this.x1force.scaleAdd(wallForce,wallForceVec,this.x1force);
         }
-
+        // no forces on the z-axis?
     }
 
     // computes force between neighboring cells
@@ -583,7 +579,8 @@ public class BSimCapsuleBacterium {
         double d21=dis21.length();
         double d12=dis12.length(); //distance between endpoints of cell and neighbour
 
-        double angleuv=Math.acos(u.dot(v)/(u.length()*v.length())); //angle between cell and its neighbour
+        //double angleuv=Math.acos(u.dot(v)/(u.length()*v.length())); //angle between cell and its neighbour
+        double angleuv = u.angle(v);
         //used as a condition on filial force extistence
 
         double thisLength=this.L; //length of current cell
@@ -592,29 +589,29 @@ public class BSimCapsuleBacterium {
         Vector3d filialAxis=new Vector3d(); // vector from end of cell to end of cell
         Vector3d longFilialAxis = new Vector3d();
 
-        double minimumAngle = Math.PI/8; //cells must be oriented to within pi/8 rads (22.5 degrees) of each other to stick end to end
+        double minimumAngle = 7 * Math.PI/8; //cells must be oriented to within pi/8 rads (22.5 degrees) of each other to stick end to end
         //filial links (secondary structure -> causes chains to form)
         //might want to include condition on being sisters
         // how to tell if two cells are sisters??
         //4 conditions (pairs of endpoints) to see if any are sufficnetly close and right angle
         // comparing x1 to x1. checking if this is the smallest of all 4, and is lesx than filial range
         // and angle is less than 2.5 degrees
-        if (d11 < d22 && d11 < d12 && d11 < d21 && d11 < 2 * radius + range_filial && Math.abs(angleuv-Math.PI)<=minimumAngle){
+        if (d11 < d22 && d11 < d12 && d11 < d21 && d11 < 2 * radius + range_filial && angleuv >= minimumAngle){
             //if the closest two points are x11 and x12
             filialAxis=dis11; // set axis to x11-x12
             double stickyForceStrength=-k_filial*(d11-2 * radius-0.05*radius); //spring attaching endpoints
             filialAxis.normalize(); // normalize axis vector to get correct scaling
             this.x1force.scaleAdd(stickyForceStrength,filialAxis,this.x1force); // adds the force to the endpoint
-            neighbour_bac.x1force.scaleAdd(-stickyForceStrength,filialAxis,neighbour_bac.x2force);
+            neighbour_bac.x1force.scaleAdd(-stickyForceStrength,filialAxis,neighbour_bac.x1force);
 
             //also a spring attaching furthest endpoints (but repulsive!) -> maybe this should be weaker?
             longFilialAxis=dis22;
             double longFilialForceStrength=k_longfilial*(d22-2*radius-thisLength-neighborLength-0.05*radius);
             longFilialAxis.normalize();
-            this.x2force.scaleAdd(longFilialForceStrength,longFilialAxis,this.x2force);
-            neighbour_bac.x2force.scaleAdd(-longFilialForceStrength,longFilialAxis,neighbour_bac.x2force);
+            //this.x2force.scaleAdd(longFilialForceStrength,longFilialAxis,this.x2force);
+            //neighbour_bac.x2force.scaleAdd(-longFilialForceStrength,longFilialAxis,neighbour_bac.x2force);
         }
-        else if(d22 < d11 && d22 < d12 && d22 < d21 && d22 < 2 * radius + range_filial&& Math.abs(angleuv-Math.PI)<=minimumAngle){
+        else if(d22 < d11 && d22 < d12 && d22 < d21 && d22 < 2 * radius + range_filial && angleuv >= minimumAngle){
             //if the closest two points are x21 and x22
             filialAxis=dis22; // set axis to x21-x22
             double stickyForceStrength=-k_filial*(d22-2 * radius-0.05*radius);
@@ -625,10 +622,10 @@ public class BSimCapsuleBacterium {
             longFilialAxis=dis11;
             double longFilialForceStrength=k_longfilial*(d11-2*radius-thisLength-neighborLength-0.05*radius);
             longFilialAxis.normalize();
-            this.x2force.scaleAdd(longFilialForceStrength,longFilialAxis,this.x2force);
-            neighbour_bac.x2force.scaleAdd(-longFilialForceStrength,longFilialAxis,neighbour_bac.x2force);
+            //this.x2force.scaleAdd(longFilialForceStrength,longFilialAxis,this.x2force);
+            //neighbour_bac.x2force.scaleAdd(-longFilialForceStrength,longFilialAxis,neighbour_bac.x2force);
         }
-        else if(d12 < d11 && d12 < d21 && d12 < d22 && d12 < 2 * radius + range_filial && Math.abs(angleuv)<=minimumAngle){
+        else if(d12 < d11 && d12 < d21 && d12 < d22 && d12 < 2 * radius + range_filial && (Math.PI - angleuv) >= minimumAngle){
             //if the closest two points are x11 and x22
             filialAxis=dis12; // set axis to x11-x22
             double stickyForceStrength=-k_filial*(d12-2 * radius -0.05*radius);
@@ -639,10 +636,10 @@ public class BSimCapsuleBacterium {
             longFilialAxis=dis21;
             double longFilialForceStrength=k_longfilial*(d21-2*radius-thisLength-neighborLength-0.05*radius);
             longFilialAxis.normalize();
-            this.x2force.scaleAdd(longFilialForceStrength,longFilialAxis,this.x2force);
-            neighbour_bac.x2force.scaleAdd(-longFilialForceStrength,longFilialAxis,neighbour_bac.x2force);
+            //this.x2force.scaleAdd(longFilialForceStrength,longFilialAxis,this.x2force);
+            //neighbour_bac.x2force.scaleAdd(-longFilialForceStrength,longFilialAxis,neighbour_bac.x2force);
         }
-        else if(d21 < d11 && d21 < d12 && d21 < d22 && d21 < 2 * radius + range_filial && Math.abs(angleuv)<=minimumAngle){
+        else if(d21 < d11 && d21 < d12 && d21 < d22 && d21 < 2 * radius + range_filial && (Math.PI - angleuv) >= minimumAngle){
             //if the closest two points are x21 and x12
             filialAxis=dis21; // set axis to x21-x12
             double stickyForceStrength=-k_filial*(d21-2 * radius -0.05*radius);
@@ -653,8 +650,8 @@ public class BSimCapsuleBacterium {
             longFilialAxis=dis12;
             double longFilialForceStrength=k_longfilial*(d12-2*radius-thisLength-neighborLength-0.05*radius);
             longFilialAxis.normalize();
-            this.x2force.scaleAdd(longFilialForceStrength,longFilialAxis,this.x2force);
-            neighbour_bac.x2force.scaleAdd(-longFilialForceStrength,longFilialAxis,neighbour_bac.x2force);
+            //this.x2force.scaleAdd(longFilialForceStrength,longFilialAxis,this.x2force);
+            //neighbour_bac.x2force.scaleAdd(-longFilialForceStrength,longFilialAxis,neighbour_bac.x2force);
         }
 
         // sticking forces: end to end and across
@@ -679,7 +676,9 @@ public class BSimCapsuleBacterium {
             Vector3d axis21 = dis21;
             axis21.normalize(); // gets directions for forces to point -> normalized displacement L/|L| as in paper
 
-            if (d11<d12 && d11 < d21){
+            double dot_product = u.dot(v);
+
+            if (dot_product > 0 /*d11<d12 && d11 < d21*/){
                 // if cells are oriented same direction
                 double strength11 = -k_sticking*(d11-stickingRestShort);
                 this.x1force.scaleAdd(strength11,axis11,this.x1force);
