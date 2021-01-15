@@ -342,6 +342,50 @@ public abstract class BSimP3DDrawer extends BSimDrawer {
 	public void draw(BSimChemicalField field, Color c, float alphaGrad) {
 		draw(field, c, alphaGrad, 255);
 	}
+	
+	/*
+	 * Updated for 2D simulation of phage field
+	 */
+	
+	/**
+	 * Draws a chemical field structure based on its defined parameters, with custom transparency (alpha) parameters.
+	 * @param field		The chemical field structure to be rendered.
+	 * @param c			Desired colour of the chemical field.
+	 * @param alphaGrad	Alpha per unit concentration of the field.
+	 * @param alphaMax	Maximum alpha value (enables better viewing).
+	 */
+	public void draw2D(BSimChemicalField field, Color c, double alphaGrad, double alphaMax) {
+		int[] boxes = field.getBoxes();
+		double[] boxSize = field.getBox();
+		double alpha = 0.0f;
+		
+		for(int i=0; i < boxes[0]; i++) {
+			for(int j=0; j < boxes[1]; j++) {
+				for(int k=0; k < boxes[2]; k++) {							
+					p3d.pushMatrix();					
+					p3d.translate((float)(boxSize[0]*i+boxSize[0]/2), (float)(boxSize[1]*j+boxSize[1]/2), (float)(boxSize[2]*k+boxSize[2]/2));
+					
+					alpha = alphaGrad*field.getConc(i,j,k);
+					if (alpha > alphaMax) alpha = alphaMax;
+					
+					p3d.fill(c.getRed(), c.getGreen(), c.getBlue(),(float)alpha);
+					// Only draw the x and y dimensions
+					p3d.box((float)boxSize[0], (float)boxSize[1], 0); // (float)boxSize[2]
+					p3d.popMatrix();
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Draw a chemical field structure based on its defined parameters (default alpha).
+	 * @param field The chemical field to be drawn.
+	 * @param c The desired colour.
+	 * @param alphaGrad The alpha-per-unit-concentration.
+	 */
+	public void draw2D(BSimChemicalField field, Color c, float alphaGrad) {
+		draw2D(field, c, alphaGrad, 255);
+	}
 
 	/**	
 	 * 	Draw a BSimOctreeField in given colour. Post order hierarchy used for drawing.
