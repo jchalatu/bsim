@@ -65,3 +65,5 @@ If you have made use of BSim in academic or commercial work, the project can be 
 - The original article describing BSim:
 [Gorochowski TE, Matyjaszkiewicz A, Todd T, Oak N, Kowalska K, et al. (2012) BSim: An Agent-Based Tool for Modeling Bacterial Populations in Systems and Synthetic Biology. *PLoS ONE* **7**(8): e42790. doi:10.1371/journal.pone.0042790](http://dx.plos.org/10.1371/journal.pone.0042790)
 
+###########
+
