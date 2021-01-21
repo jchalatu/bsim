@@ -560,11 +560,11 @@ public class NeighbourInteractions {
             // separate time-resolution for images vs excel file
             sim.addExporter(imageExporter);
 
-            sim.export();
 
             /**
              * Export a csv file that matches CellProfiler's output
              */
+            /*
             String CellProfilerFields = "ImageNumber,ObjectNumber,Intensity_IntegratedIntensityEdge_DilateImage6," +
                     "Intensity_IntegratedIntensity_DilateImage6,Intensity_LowerQuartileIntensity_DilateImage6," +
                     "Intensity_MADIntensity_DilateImage6,Intensity_MassDisplacement_DilateImage6," +
@@ -631,7 +631,7 @@ public class NeighbourInteractions {
                     "TrackObjects_Displacement_50,TrackObjects_DistanceTraveled_50,TrackObjects_FinalAge_50," +
                     "TrackObjects_IntegratedDistance_50,TrackObjects_Label_50,TrackObjects_Lifetime_50," +
                     "TrackObjects_Linearity_50,TrackObjects_ParentImageNumber_50,TrackObjects_ParentObjectNumber_50," +
-                    "TrackObjects_TrajectoryX_50,TrackObjects_TrajectoryY_50,Length,Orientation";
+                    "TrackObjects_TrajectoryX_50,TrackObjects_TrajectoryY_50,Length,Orientation\n";
 
 
             String temp = "";
@@ -654,7 +654,7 @@ public class NeighbourInteractions {
 
 
 
-            BSimLogger CellProfilerLogger = new BSimLogger(sim, filePath + "simulation.csv") {
+            BSimLogger CellProfilerLogger = new BSimLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv") {
 
                 @Override
                 public void before() {
@@ -667,20 +667,35 @@ public class NeighbourInteractions {
                     String buffer = new String();
                     buffer = "";
                     for(BSimCapsuleBacterium b : bacteriaAll) {
-                        buffer += (sim.getTimestep() * sim.getDt() / dt) + "," + (b.id + 1) + "," + Fields_C_to_T +
+                        buffer += (sim.getTimestep() * sim.getDt() / dt + 1) + "," + (b.id + 1) + "," + Fields_C_to_T +
                                 b.position.x + "," + b.position.y + "," + Fields_W_to_Y +
                                 (b.id + 1) + "," + "-" + "," + Fields_AB_to_CU +
-                                "-,-,-,-," + (b.id + 1) + "," + "-,-,-," + (b.id + 1) + "," +
+                                "-,-,-,-," + (b.id + 1) + "," + "-,-,-,-," +
                                 "-,-," + b.L + "," + b.direction() + "\n";
                     }
 
                     write(buffer);
                 }
+
+                @Override
+                public void write(String text) {
+                    try {
+                        bufferedWriter.write(text);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
             };
             CellProfilerLogger.setDt(10);			// Set export time step
             sim.addExporter(CellProfilerLogger);
+             */
 
+            CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv", bacteriaAll);
+            cp_logger.setDt(10);			// Set export time step
+            sim.addExporter(cp_logger);
 
+            sim.export();
 
             /**
              * Drawing a java plot once we're done?
