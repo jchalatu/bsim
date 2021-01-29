@@ -19,6 +19,16 @@ public class CellProfilerLogger extends BSimLogger {
     @Override
     public void before() {
         super.before();
+        String CellProfilerFields = "ImageNumber,ObjectNumber,AreaShape_Area,AreaShape_BoundingBoxArea," +
+                "AreaShape_BoundingBoxMaximum_X,AreaShape_BoundingBoxMaximum_Y,AreaShape_BoundingBoxMinimum_X," +
+                "AreaShape_BoundingBoxMinimum_Y,AreaShape_Center_X,AreaShape_Center_Y,AreaShape_Compactness," +
+                "AreaShape_Eccentricity,AreaShape_EquivalentDiameter,AreaShape_EulerNumber,AreaShape_Extent," +
+                "AreaShape_FormFactor,AreaShape_MajorAxisLength,AreaShape_MaxFeretDiameter,AreaShape_MaximumRadius," +
+                "AreaShape_MeanRadius,AreaShape_MedianRadius,AreaShape_MinFeretDiameter,AreaShape_MinorAxisLength," +
+                "AreaShape_Orientation,AreaShape_Perimeter,AreaShape_Solidity,Children_EditedObjects8_Count," +
+                "Children_RelateObjects9_Count,Location_Center_X,Location_Center_Y,Number_Object_Number," +
+                "Parent_EditedObjects8,Parent_IdentifyPrimaryObjects7\n";
+        /*
         String CellProfilerFields = "ImageNumber,ObjectNumber,Intensity_IntegratedIntensityEdge_DilateImage6," +
                 "Intensity_IntegratedIntensity_DilateImage6,Intensity_LowerQuartileIntensity_DilateImage6," +
                 "Intensity_MADIntensity_DilateImage6,Intensity_MassDisplacement_DilateImage6," +
@@ -86,11 +96,13 @@ public class CellProfilerLogger extends BSimLogger {
                 "TrackObjects_IntegratedDistance_50,TrackObjects_Label_50,TrackObjects_Lifetime_50," +
                 "TrackObjects_Linearity_50,TrackObjects_ParentImageNumber_50,TrackObjects_ParentObjectNumber_50," +
                 "TrackObjects_TrajectoryX_50,TrackObjects_TrajectoryY_50,Length,Orientation\n";
+         */
         write(CellProfilerFields);
     }
 
     @Override
     public void during() {
+        /*
         String temp = "";
         for(int i = 0; i < 18; i++) {
             temp += "-,";
@@ -108,14 +120,49 @@ public class CellProfilerLogger extends BSimLogger {
             temp += "-,";
         }
         final String Fields_AB_to_CU = new String(temp);
+         */
+        String temp = "";
+        for(int i = 0; i < 6; i++) {
+            temp += "-,";
+        }
+        final String Fields_C_to_H = new String(temp);
+
+        temp = "";
+        for(int i = 0; i < 6; i++) {
+            temp += "-,";
+        }
+        final String Fields_K_to_P = new String(temp);
+
+        temp = "";
+        for(int i = 0; i < 5; i++) {
+            temp += "-,";
+        }
+        final String Fields_R_to_V = new String(temp);
+
+        temp = "";
+        for(int i = 0; i < 4; i++) {
+            temp += "-,";
+        }
+        final String Fields_Y_to_AB = new String(temp);
 
         String buffer = "";
         for(BSimCapsuleBacterium b : bacteriaAll) {
+            /*
             buffer += (sim.getTimestep() * sim.getDt() / dt + 1) + "," + (b.id + 1) + "," + Fields_C_to_T +
                     b.position.x + "," + b.position.y + "," + Fields_W_to_Y +
                     (b.id + 1) + "," + "-" + "," + Fields_AB_to_CU +
                     "-,-,-,-," + (b.id + 1) + "," + "-,-,-,-," +
                     "-,-," + b.L + "," + b.direction() + "\n";
+            */
+            buffer += ((int) (sim.getTimestep() * sim.getDt() / dt) + 1) + "," + (b.id + 1) + "," + Fields_C_to_H +
+                    (b.position.x * NeighbourInteractions.pixel_to_um_ratio) + "," +
+                    (b.position.y  * NeighbourInteractions.pixel_to_um_ratio) + "," + Fields_K_to_P +
+                    (b.L + 2 * b.radius) * NeighbourInteractions.pixel_to_um_ratio + "," + Fields_R_to_V +
+                    (2 * b.radius) * NeighbourInteractions.pixel_to_um_ratio + "," +
+                    (b.direction() - Math.PI / 2) + "," + Fields_Y_to_AB +
+                    (b.position.x * NeighbourInteractions.pixel_to_um_ratio) + "," +
+                    (b.position.y * NeighbourInteractions.pixel_to_um_ratio) + "," +
+                    (b.id + 1) + "," + (b.id + 1) + "," + "-\n";
         }
         write(buffer);
     }

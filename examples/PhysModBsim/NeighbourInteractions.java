@@ -27,6 +27,13 @@ import java.util.*;
 // Growth experiments form Fall 2020
 public class NeighbourInteractions {
 
+    // Sohaib Nadeem
+    static final double pixel_to_um_ratio = 13.89;
+    final double width_pixels = 700;
+    final double height_pixels = 250;
+    final double width_um = width_pixels / pixel_to_um_ratio; // should be kept as constants for cell prof.
+    final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
+
     // @parameter means an optional user-specified value in the command line
     // export mode means output appears
     @Parameter(names = "-export", description = "Enable export mode.")
@@ -34,7 +41,7 @@ public class NeighbourInteractions {
 
     //set dimnesions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
-    public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {198.0,159.0, 1.}));
+    public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {width_um, height_um, 1.}));
 
     // Boundaries
     //Boolean flag: specifies whether any walls are needed
@@ -78,6 +85,7 @@ public class NeighbourInteractions {
     private static final boolean WITH_GROWTH = true;
 
     static Random bacRng;
+
 
     // this is the very first function that runs in the simulation
     // this runs the simulation
@@ -175,6 +183,46 @@ public class NeighbourInteractions {
         //specify output file path
         String systemPath = new File("").getAbsolutePath()+"\\SingleCellSims";
 
+        BufferedReader csvReader = null;
+        try {
+            // try reading the initial position file
+            csvReader = new BufferedReader(new FileReader("C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\MyExpt_EditedObjects8.csv"));
+        } catch (FileNotFoundException e) {
+            // if that doesn't work, print out an error
+            e.printStackTrace();
+        }
+        try {
+            String row = csvReader.readLine();
+            // check if fields match those of the required csv file from CellProfiler
+            while( (row = csvReader.readLine()) != null ) {
+                double cell_info[] = Arrays.stream(row.split(",")).mapToDouble(Double::parseDouble).toArray();
+
+                if ( (int) cell_info[0] == 1 ) {
+                    double cell_length = ( cell_info[16] - cell_info[22] ) / pixel_to_um_ratio;
+                    double cell_orientation = cell_info[23] + (Math.PI / 2);
+                    double cell_center_x = cell_info[8] / pixel_to_um_ratio;
+                    double cell_center_y = cell_info[9] / pixel_to_um_ratio;
+
+                    double axis_x = cell_length * Math.cos(cell_orientation); // use trig. identity to simplify?
+                    double axis_y = cell_length * Math.sin(cell_orientation); // use trig. identity to simplify?
+
+                    Vector3d x1 = new Vector3d(cell_center_x + (axis_x / 2), cell_center_y + (axis_y / 2), 0.5/*bacRng.nextDouble()*0.1*(simZ - 0.1)/2.0*/);
+                    Vector3d x2 = new Vector3d(cell_center_x - (axis_x / 2), cell_center_y - (axis_y / 2), 0.5/*bacRng.nextDouble()*0.1*(simZ - 0.1)/2.0*/);
+
+                    Bacterium bac0 = createBacterium(sim, x1, x2);
+                    // adds the newly created bacterium to our lists for tracking purposes
+                    bac.add(bac0); //for separate subpopulations
+                    bacteriaAll.add(bac0);  // for all cells
+                }
+                else {
+                    break;
+                }
+            }
+        } catch(IOException e) {
+            e.printStackTrace(); // if there is an error, this will just print out the message
+        }
+
+        /*
         // creates a new csvreader object which can extract data from .csv files
         // Catue added this, to read a CSV file, which specified endpoints of each cell, one per row
         BufferedReader csvReader = null;
@@ -222,6 +270,7 @@ public class NeighbourInteractions {
             bac.add(bac0); //for separate subpopulations
             bacteriaAll.add(bac0);  // for all cells
         }
+         */
 
         // Set up stuff for growth. Placeholders for the recently born and dead
         final ArrayList<Bacterium> bac_born = new ArrayList();
@@ -561,136 +610,7 @@ public class NeighbourInteractions {
             sim.addExporter(imageExporter);
 
 
-            /**
-             * Export a csv file that matches CellProfiler's output
-             */
-            /*
-            String CellProfilerFields = "ImageNumber,ObjectNumber,Intensity_IntegratedIntensityEdge_DilateImage6," +
-                    "Intensity_IntegratedIntensity_DilateImage6,Intensity_LowerQuartileIntensity_DilateImage6," +
-                    "Intensity_MADIntensity_DilateImage6,Intensity_MassDisplacement_DilateImage6," +
-                    "Intensity_MaxIntensityEdge_DilateImage6,Intensity_MaxIntensity_DilateImage6," +
-                    "Intensity_MeanIntensityEdge_DilateImage6,Intensity_MeanIntensity_DilateImage6," +
-                    "Intensity_MedianIntensity_DilateImage6,Intensity_MinIntensityEdge_DilateImage6," +
-                    "Intensity_MinIntensity_DilateImage6,Intensity_StdIntensityEdge_DilateImage6," +
-                    "Intensity_StdIntensity_DilateImage6,Intensity_UpperQuartileIntensity_DilateImage6," +
-                    "Location_CenterMassIntensity_X_DilateImage6,Location_CenterMassIntensity_Y_DilateImage6," +
-                    "Location_CenterMassIntensity_Z_DilateImage6,Location_Center_X,Location_Center_Y," +
-                    "Location_MaxIntensity_X_DilateImage6,Location_MaxIntensity_Y_DilateImage6," +
-                    "Location_MaxIntensity_Z_DilateImage6,Number_Object_Number,Parent_IdentifyPrimaryObjects7," +
-                    "RadialDistribution_FracAtD_DilateImage6_1of4,RadialDistribution_FracAtD_DilateImage6_2of4," +
-                    "RadialDistribution_FracAtD_DilateImage6_3of4,RadialDistribution_FracAtD_DilateImage6_4of4," +
-                    "RadialDistribution_MeanFrac_DilateImage6_1of4,RadialDistribution_MeanFrac_DilateImage6_2of4," +
-                    "RadialDistribution_MeanFrac_DilateImage6_3of4,RadialDistribution_MeanFrac_DilateImage6_4of4," +
-                    "RadialDistribution_RadialCV_DilateImage6_1of4,RadialDistribution_RadialCV_DilateImage6_2of4," +
-                    "RadialDistribution_RadialCV_DilateImage6_3of4,RadialDistribution_RadialCV_DilateImage6_4of4," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_0_0," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_1_1," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_2_0," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_2_2," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_3_1," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_3_3," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_4_0," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_4_2," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_4_4," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_5_1," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_5_3," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_5_5," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_6_0," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_6_2," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_6_4," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_6_6," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_7_1," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_7_3," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_7_5," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_7_7," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_8_0," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_8_2," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_8_4," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_8_6," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_8_8," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_9_1," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_9_3," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_9_5," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_9_7," +
-                    "RadialDistribution_ZernikeMagnitude_DilateImage6_9_9," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_0_0,RadialDistribution_ZernikePhase_DilateImage6_1_1," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_2_0,RadialDistribution_ZernikePhase_DilateImage6_2_2," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_3_1,RadialDistribution_ZernikePhase_DilateImage6_3_3," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_4_0,RadialDistribution_ZernikePhase_DilateImage6_4_2," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_4_4,RadialDistribution_ZernikePhase_DilateImage6_5_1," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_5_3,RadialDistribution_ZernikePhase_DilateImage6_5_5," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_6_0,RadialDistribution_ZernikePhase_DilateImage6_6_2," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_6_4,RadialDistribution_ZernikePhase_DilateImage6_6_6," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_7_1,RadialDistribution_ZernikePhase_DilateImage6_7_3," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_7_5,RadialDistribution_ZernikePhase_DilateImage6_7_7," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_8_0,RadialDistribution_ZernikePhase_DilateImage6_8_2," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_8_4,RadialDistribution_ZernikePhase_DilateImage6_8_6," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_8_8,RadialDistribution_ZernikePhase_DilateImage6_9_1," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_9_3,RadialDistribution_ZernikePhase_DilateImage6_9_5," +
-                    "RadialDistribution_ZernikePhase_DilateImage6_9_7,RadialDistribution_ZernikePhase_DilateImage6_9_9," +
-                    "TrackObjects_Displacement_50,TrackObjects_DistanceTraveled_50,TrackObjects_FinalAge_50," +
-                    "TrackObjects_IntegratedDistance_50,TrackObjects_Label_50,TrackObjects_Lifetime_50," +
-                    "TrackObjects_Linearity_50,TrackObjects_ParentImageNumber_50,TrackObjects_ParentObjectNumber_50," +
-                    "TrackObjects_TrajectoryX_50,TrackObjects_TrajectoryY_50,Length,Orientation\n";
-
-
-            String temp = "";
-            for(int i = 0; i < 18; i++) {
-                temp += "-,";
-            }
-            String Fields_C_to_T = new String(temp);
-
-            temp = "";
-            for(int i = 0; i < 3; i++) {
-                temp += "-,";
-            }
-            String Fields_W_to_Y = new String(temp);
-
-            temp = "";
-            for(int i = 0; i < 72; i++) {
-                temp += "-,";
-            }
-            final String Fields_AB_to_CU = new String(temp);
-
-
-
-            BSimLogger CellProfilerLogger = new BSimLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv") {
-
-                @Override
-                public void before() {
-                    super.before();
-                    write(CellProfilerFields);
-                }
-
-                @Override
-                public void during() {
-                    String buffer = new String();
-                    buffer = "";
-                    for(BSimCapsuleBacterium b : bacteriaAll) {
-                        buffer += (sim.getTimestep() * sim.getDt() / dt + 1) + "," + (b.id + 1) + "," + Fields_C_to_T +
-                                b.position.x + "," + b.position.y + "," + Fields_W_to_Y +
-                                (b.id + 1) + "," + "-" + "," + Fields_AB_to_CU +
-                                "-,-,-,-," + (b.id + 1) + "," + "-,-,-,-," +
-                                "-,-," + b.L + "," + b.direction() + "\n";
-                    }
-
-                    write(buffer);
-                }
-
-                @Override
-                public void write(String text) {
-                    try {
-                        bufferedWriter.write(text);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-            };
-            CellProfilerLogger.setDt(10);			// Set export time step
-            sim.addExporter(CellProfilerLogger);
-             */
-
+            // Export a csv file that matches CellProfiler's output
             CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv", bacteriaAll);
             cp_logger.setDt(10);			// Set export time step
             sim.addExporter(cp_logger);
