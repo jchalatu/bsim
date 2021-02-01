@@ -18,7 +18,7 @@ public class CellProfilerLogger extends BSimLogger {
 
     @Override
     public void before() {
-        super.before();
+        super.before();					// Updated to add angle between daughter cells, "Division_Angle"
         String CellProfilerFields = "ImageNumber,ObjectNumber,AreaShape_Area,AreaShape_BoundingBoxArea," +
                 "AreaShape_BoundingBoxMaximum_X,AreaShape_BoundingBoxMaximum_Y,AreaShape_BoundingBoxMinimum_X," +
                 "AreaShape_BoundingBoxMinimum_Y,AreaShape_Center_X,AreaShape_Center_Y,AreaShape_Compactness," +
@@ -27,7 +27,7 @@ public class CellProfilerLogger extends BSimLogger {
                 "AreaShape_MeanRadius,AreaShape_MedianRadius,AreaShape_MinFeretDiameter,AreaShape_MinorAxisLength," +
                 "AreaShape_Orientation,AreaShape_Perimeter,AreaShape_Solidity,Children_EditedObjects8_Count," +
                 "Children_RelateObjects9_Count,Location_Center_X,Location_Center_Y,Number_Object_Number," +
-                "Parent_EditedObjects8,Parent_IdentifyPrimaryObjects7\n";
+                "Parent_EditedObjects8,Parent_IdentifyPrimaryObjects7,Division_Angle\n";
         /*
         String CellProfilerFields = "ImageNumber,ObjectNumber,Intensity_IntegratedIntensityEdge_DilateImage6," +
                 "Intensity_IntegratedIntensity_DilateImage6,Intensity_LowerQuartileIntensity_DilateImage6," +
@@ -162,7 +162,10 @@ public class CellProfilerLogger extends BSimLogger {
                     (b.direction() - Math.PI / 2) + "," + Fields_Y_to_AB +
                     (b.position.x * NeighbourInteractions.pixel_to_um_ratio) + "," +
                     (b.position.y * NeighbourInteractions.pixel_to_um_ratio) + "," +
-                    (b.id + 1) + "," + (b.id + 1) + "," + "-\n";
+                    (b.id + 1) + "," + (b.id + 1) + "," + 
+                    "-," +		// Updated to add angle between daughter cells
+                    (b.angle_initial) + "," +
+                    "-\n";
         }
         write(buffer);
     }
