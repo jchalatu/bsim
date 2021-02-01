@@ -93,6 +93,9 @@ public class Bacterium extends BSimCapsuleBacterium {
 
         // add child to list of children - Sohaib Nadeem
         addChild(child);
+        
+        // Calculate angle between daughter cells at division - Sheng Fang
+        angle_initial = coordinate(child);
 
         // prints a line whenever a new bacterium is made
         System.out.println("Child ID is " + child.id);
@@ -109,7 +112,3 @@ public class Bacterium extends BSimCapsuleBacterium {
 //    }
 
 }
-
-
-
-

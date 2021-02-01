@@ -69,6 +69,9 @@ public class BSimCapsuleBacterium {
         this.infected = infected;
     }*/
     
+    /** Angle between daughter cells at division. */
+    public double angle_initial = 0.0; 
+    
 	/** Status of phage occupation within bacterium. */
 	private boolean infected = false;
 
@@ -93,18 +96,18 @@ public class BSimCapsuleBacterium {
     }
 
     // Spring constants
-    public double k_int = 50.0;     //internal force
-    public double k_wall = 50.0;   	//overlap with wall
-    public double k_cell = 50.0;   	//overlapping cells
-    public double k_filial = 0.0000001; 	//end to end attraction
-    public double k_longfilial = 0.0000001; //opposite end repulsion when filial is active
-    public double k_sticking = 10.0;   		//side to side attraction
-    public double k_wallstick = 0.00;  		//cell to wall attraction (0 right now since walls are leaky)
+    public double k_int = 50.0;     		// internal force (5e-5 from Storck)
+    public double k_wall = 50.0;   			// overlap with wall
+    public double k_cell = 50.0;   			// overlapping cells (1e-4 from Storck)
+    public double k_filial = 5e-7;			// end to end attraction
+    public double k_longfilial = 5e-7;		// opposite end repulsion when filial is active
+    public double k_sticking = 10.0;   		// side to side attraction
+    public double k_wallstick = 0.00;  		// cell to wall attraction (0 right now since walls are leaky)
 
     // endpoint-to-endpoint ranges within which which these forces act, or (endpoint-to-wall distance)
-    public double range_filial = 0.01; //maximum range at which filial forces activate
-    public double range_sticking = 0.6; // max range ... sticking forces
-    public double range_wallstick = 0.25; // max range ... attractive wall forces
+    public double range_filial = 0.01; 		// maximum range at which filial forces activate
+    public double range_sticking = 0.6; 	// max range ... sticking forces
+    public double range_wallstick = 0.25; 	// max range ... attractive wall forces
     
     private double EPS = 1e-12; // machine precision value for use in checking whether quantity is zero
     // You can use it like this: value x is effectively zero if Math.abs(x)<EPS
@@ -285,6 +288,7 @@ public class BSimCapsuleBacterium {
          *            .            .  *stopped* by the RHS bound check!
          *
          */
+    	
         wallBelow(x1.x, x1force, new Vector3d(1,0,0));
         wallBelow(x1.y, x1force, new Vector3d(0,1,0)); // TOP //
         wallBelow(x1.z, x1force, new Vector3d(0,0,1));
@@ -365,50 +369,52 @@ public class BSimCapsuleBacterium {
         Thank you!
         */
 
-        Vector3d dist = new Vector3d(); dist.sub(this.position, neighbour_bac.position); // position = midpoint of cell
+    	// Calculates the distance between two lines (see link above)
+        Vector3d dist = new Vector3d(); 
+        dist.sub(this.position, neighbour_bac.position); // position = midpoint of cell
 
         double rDist = (this.L + neighbour_bac.L)*0.5 + (this.radius + neighbour_bac.radius);
-        Vector3d u = new Vector3d(); //define u as a vector
-        u.sub(this.x2, this.x1); // u = x2 - x1 = vector pointing from one endpoint to the other
-        Vector3d v = new Vector3d(); //define v as a vector
-        v.sub(neighbour_bac.x2, neighbour_bac.x1); // v = x2 - x1 (neighbour cell)
-        Vector3d w = new Vector3d(); //define w as a vector
-        w.sub(this.x1, neighbour_bac.x1); // difference between the two x1 points
+        Vector3d u = new Vector3d(); 					// define u as a vector
+        u.sub(this.x2, this.x1); 						// u = x2 - x1 = vector pointing from one endpoint to the other
+        Vector3d v = new Vector3d(); 					// define v as a vector
+        v.sub(neighbour_bac.x2, neighbour_bac.x1); 		// v = x2 - x1 (neighbour cell)
+        Vector3d w = new Vector3d(); 					// define w as a vector
+        w.sub(this.x1, neighbour_bac.x1); 				// difference between the two x1 points
         if(dist.dot(dist) < rDist*rDist) {
             double a = u.dot(u);         // always >= 0
             double b = u.dot(v);
             double c = v.dot(v);         // always >= 0
             double d = u.dot(w);
             double e = v.dot(w);
-            double D = a * c - b * b; //figure out what D is by visualizing what it is        // always >= 0
+            double D = a * c - b * b; 	// figure out what D is by visualizing what it is     // always >= 0
             double sc = D;
             double sN = D;
-            double sD = D;       // sc = sN / sD, default sD = D >= 0
+            double sD = D;       		// sc = sN / sD, default sD = D >= 0
             double tc = D;
             double tN = D;
-            double tD = D;       // tc = tN / tD, default tD = D >= 0
+            double tD = D;       		// tc = tN / tD, default tD = D >= 0
 
             // compute the line parameters of the two closest points
-            if (D < EPS) { // the lines are almost parallel
-                sN = 0.0;         // force using point P0 on segment S1
-                sD = 1.0;         // to prevent possible division by 0.0 later
+            if (D < EPS) { 				// the lines are almost parallel
+                sN = 0.0;         		// force using point P0 on segment S1
+                sD = 1.0;         		// to prevent possible division by 0.0 later
                 tN = e;
                 tD = c;
-            } else {                 // get the closest points on the infinite lines
+            } else {                 	// get the closest points on the infinite lines
                 sN = (b * e - c * d);
                 tN = (a * e - b * d);
-                if (sN < 0.0) {        // sc < 0 => the s=0 edge is visible
+                if (sN < 0.0) {        	// sc < 0 => the s=0 edge is visible
                     sN = 0.0;
                     tN = e;
                     tD = c;
-                } else if (sN > sD) {  // sc > 1  => the s=1 edge is visible
+                } else if (sN > sD) {  	// sc > 1  => the s=1 edge is visible
                     sN = sD;
                     tN = e + b;
                     tD = c;
                 }
             }
 
-            if (tN < 0.0) {            // tc < 0 => the t=0 edge is visible
+            if (tN < 0.0) {            	// tc < 0 => the t=0 edge is visible
                 tN = 0.0;
                 // recompute sc for this edge
                 if (-d < 0.0)
@@ -436,20 +442,17 @@ public class BSimCapsuleBacterium {
             sc = (Math.abs(sN) < EPS ? 0.0 : sN / sD);
             tc = (Math.abs(tN) < EPS ? 0.0 : tN / tD);
 
-            // get the difference of the two closest points
-            Vector3d dP = new Vector3d(w);
-            dP.scaleAdd(sc, u, dP);
+            Vector3d dP = new Vector3d(w);			
+            dP.scaleAdd(sc, u, dP);					
             dP.scaleAdd(-tc, v, dP);
 
             double neighbourDist = dP.length();
 
-
-
+            // If a collision occurs
             if (neighbourDist < 2 * radius) {
                 // Try this; if necessary we can simplify to a linear force
                 double repulsionStrength = 0.4 * k_cell * Math.pow(2 * radius - neighbourDist, 2.5);
                 // why is this to the 2.5 power?
-
 
 /////////////////////////////////////////////////////////////////////////////////////
                     /*
@@ -527,6 +530,7 @@ public class BSimCapsuleBacterium {
 ////
 ////            neighbour_bac.x1force.scaleAdd(rsnx1, contactToNeighbourx1, neighbour_bac.x1force);
 ////            neighbour_bac.x2force.scaleAdd(rsnx2, contactToNeighbourx2, neighbour_bac.x2force);
+                
                 // ***********
                 // *********** /NEW
                 // ***********
@@ -539,19 +543,15 @@ public class BSimCapsuleBacterium {
                 this.x1force.scaleAdd((1.0 - sc) * repulsionStrength, dP, this.x1force);
                 this.x2force.scaleAdd(sc * repulsionStrength, dP, this.x2force);
 
-
                 //final calculation of overlap forces
                 neighbour_bac.x1force.scaleAdd(-(1.0 - tc) * repulsionStrength, dP, neighbour_bac.x1force);
                 neighbour_bac.x2force.scaleAdd(-tc * repulsionStrength, dP, neighbour_bac.x2force);
-
 
 //                this.x1force.scaleAdd((1.1 - sc) * repulsionStrength, dP, this.x1force);
 //                this.x2force.scaleAdd((sc + 0.1) * repulsionStrength, dP, this.x2force);
 //
 //                neighbour_bac.x1force.scaleAdd(-(1.1 - tc) * repulsionStrength, dP, neighbour_bac.x1force);
 //                neighbour_bac.x2force.scaleAdd(-(tc + 0.1) * repulsionStrength, dP, neighbour_bac.x2force);
-
-
 
                 // ***********
                 // *********** /OLD
@@ -596,6 +596,7 @@ public class BSimCapsuleBacterium {
         //4 conditions (pairs of endpoints) to see if any are sufficnetly close and right angle
         // comparing x1 to x1. checking if this is the smallest of all 4, and is lesx than filial range
         // and angle is less than 2.5 degrees
+        
         if (d11 < d22 && d11 < d12 && d11 < d21 && d11 < 2 * radius + range_filial && angleuv >= minimumAngle){
             //if the closest two points are x11 and x12
             filialAxis=dis11; // set axis to x11-x12
@@ -608,6 +609,7 @@ public class BSimCapsuleBacterium {
             longFilialAxis=dis22;
             double longFilialForceStrength=k_longfilial*(d22-2*radius-thisLength-neighborLength-0.05*radius);
             longFilialAxis.normalize();
+            
             //this.x2force.scaleAdd(longFilialForceStrength,longFilialAxis,this.x2force);
             //neighbour_bac.x2force.scaleAdd(-longFilialForceStrength,longFilialAxis,neighbour_bac.x2force);
         }
@@ -660,7 +662,6 @@ public class BSimCapsuleBacterium {
         if (dist.length()<range_sticking){ //dist is distance from midpoint to midpoint
             double maxCellLength=Math.max(thisLength,neighborLength); // checks which cell is longer
 
-
             // computes rest length of diagonally oriented springs -> sqrt((2r)^2 + L^2)
             double stickingRestLong = Math.pow(4*radius*radius + maxCellLength*maxCellLength,0.5);
 
@@ -677,7 +678,7 @@ public class BSimCapsuleBacterium {
             axis21.normalize(); // gets directions for forces to point -> normalized displacement L/|L| as in paper
 
             double dot_product = u.dot(v);
-
+            
             if (dot_product > 0 /*d11<d12 && d11 < d21*/){
                 // if cells are oriented same direction
                 double strength11 = -k_sticking*(d11-stickingRestShort);
@@ -831,7 +832,6 @@ public class BSimCapsuleBacterium {
         double angle = Math.acos((d1.x * d2.x+ d1.y*d2.y+
                     d1.z*d2.z)/(d1.length()*d2.length()));
         return angle;
-
     }
 
     // returns orientation of cell
