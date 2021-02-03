@@ -56,6 +56,9 @@ public class BSimCapsuleBacterium {
 
     // how long the bacterium must be before there it divides
     public double L_th = 7; //make sure L_max is greater than L_th, default is 7
+    
+	/** Length threshold for asymmetric growth (um). */
+	final public double L_asym = 5;
 
     // growth rate of bacterium -> increases length each second
     public double k_growth = 0.02;
@@ -216,9 +219,23 @@ public class BSimCapsuleBacterium {
         else {
             internalPotential = -0.5 * k_int * Math.pow(lengthDiff, 2);
         }
-
+        
+        /** Updated to implement asymmetrical elongation. */
+        
+        // Elongate symmetrically after the threshold is met
+        if ( L >= L_asym ) {
+            this.x1force.scaleAdd(-internalPotential, seg, this.x1force);
+            this.x2force.scaleAdd(internalPotential, seg, this.x2force);
+        }
+        // Elongate asymmetrically until the length threshold is met
+        else {
+        	this.x1force.scaleAdd(-internalPotential, seg, this.x1force);
+        }
+        
+        /*
         this.x1force.scaleAdd(-internalPotential, seg, this.x1force);
-        this.x2force.scaleAdd(internalPotential, seg, this.x2force);
+        this.x2force.scaleAdd(internalPotential, seg, this.x2force);		
+        */
     }
 
     // computes the force acting on the cell from walls below the cell (wall overlap)
@@ -288,7 +305,6 @@ public class BSimCapsuleBacterium {
          *            .            .  *stopped* by the RHS bound check!
          *
          */
-    	
         wallBelow(x1.x, x1force, new Vector3d(1,0,0));
         wallBelow(x1.y, x1force, new Vector3d(0,1,0)); // TOP //
         wallBelow(x1.z, x1force, new Vector3d(0,0,1));
@@ -302,7 +318,6 @@ public class BSimCapsuleBacterium {
         wallAbove(x2.x, x2force, new Vector3d(-1,0,0), sim.getBound().x);
         wallAbove(x2.y, x2force, new Vector3d(0, -1, 0), sim.getBound().y); // BOTTOM //
         wallAbove(x2.z, x2force, new Vector3d(0, 0, -1), sim.getBound().z);
-
 
         ///////////////////////////Catie Terrey
         // added forces from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4017289/
