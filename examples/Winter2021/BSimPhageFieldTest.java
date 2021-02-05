@@ -50,6 +50,8 @@ public class BSimPhageFieldTest {
     /** Whether to flow phage in through the side of the boundary. */
     private static final boolean FLOW_IN = true;
     
+    //static Random bacRng;
+    
     // Boundaries
     // Boolean flag: specifies whether any walls are needed
     @Parameter(names = "-fixedbounds", description = "Enable fixed boundaries. (If not, one boundary will be leaky as real uf chamber).")
@@ -63,9 +65,10 @@ public class BSimPhageFieldTest {
     // Simulation setup parameters. Set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
     public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {75.0, 50.0, 1.0} ));
+    // 75.0, 50.0, 1.0
     // 100.0, 50.0, 1.0
     // 125.0, 75.0, 1.0
-    // 198.0, 159.0, 1.0
+    // 198.0, 159.0, 1.0	// Use for onecell.csv
 
     // Grid ->
     // 52x42 -> 546
@@ -76,7 +79,7 @@ public class BSimPhageFieldTest {
     // Density (cell number)
     // optional call to a default initial set of cells
     @Parameter(names = "-pop", arity = 1, description = "Initial seed population (n_total).")
-    public int initialPopulation = 3;
+    public int initialPopulation = 2;
 
     // A:R ratio
     // for default set of cells, set ratio of two subpopulations
@@ -85,17 +88,20 @@ public class BSimPhageFieldTest {
 
     //growth rate standard deviation
     @Parameter(names="-gr_stdv",arity=1,description = "growth rate standard deviation")
-    public double growth_stdv = 0.05;
+    //public static double growth_stdv = 0.05;		
+    public static double growth_stdv = 0.277;		// From storck paper
     //growth rate mean
     @Parameter(names="-gr_mean",arity=1,description = "growth rate mean")
-    public double growth_mean = 0.2;
+    //public static double growth_mean = 0.2;
+    public static double growth_mean = 0.6;
+    //public static double growth_mean = 1.23;		// From storck paper (1.23 +- 0.277/hr)
 
     //elongation threshold standard deviation
     @Parameter(names="-len_stdv",arity=1,description = "elongation threshold standard deviation")
-    public double length_stdv = 0.1;
+    public static double length_stdv = 0.1;
     //elongation threshold mean
     @Parameter(names="-len_mean",arity=1,description = "elongation threshold mean")
-    public double length_mean = 7.0;
+    public static double length_mean = 7.0;
 
     /** Main Function. 
      * This is the very first function that runs in the simulation.
@@ -112,6 +118,47 @@ public class BSimPhageFieldTest {
 
         // Begins the simulation
         bsim_ex.run();
+    }
+    
+    /** Creates a new Bacterium object. */
+    public static Bacterium createBacterium(BSim sim, BSimChemicalField field, Vector3d x1, Vector3d x2) {
+    	Random bacRng = new Random(); 		// Random number generator
+        bacRng.setSeed(50); 				// Initializes random number generator
+        
+        // Creates a new bacterium object whose endpoints correspond to the above data
+        Bacterium bacterium = new Bacterium(sim, field, x1, x2);
+
+        // Determine the vector between the endpoints
+        // If the data suggests that a bacterium is larger than L_max, that bacterium will instead
+        // be initialized with length 1. Otherwise, we set the length in the following if statement
+        // Earlier they were all initiatlied to length 1.
+        Vector3d dispx1x2 = new Vector3d();
+        dispx1x2.sub(x2,x1); 						// Sub is subtract
+        double length = dispx1x2.length(); 			// Determined.
+        
+        if (length < bacterium.L_max) {
+            bacterium.initialise(length, x1, x2); 	// Redundant to record length, but ok.
+        }
+
+        // Assigns a growth rate and a division length to bacterium according to a normal distribution
+        //double growthRate = growth_stdv * bacRng.nextGaussian() + growth_mean;/////////////
+        double growthRate = 0.7;
+        bacterium.setK_growth(growthRate);
+        
+        double lengthThreshold = length_stdv * bacRng.nextGaussian() + length_mean;
+        bacterium.setElongationThreshold(lengthThreshold);
+
+        return bacterium;
+    }
+    
+    /** Returns the concentration as a function */
+    public double phageConc( String func, double conc, double flow_rate, int x ) {
+    	if ( func == "constant" ) {
+    		return conc * flow_rate;
+    	}
+    	else {
+    		return 0.0;
+    	}
     }
 
     // This function does a lot. let's break it down
@@ -138,6 +185,7 @@ public class BSimPhageFieldTest {
 		 */
         final BSim sim = new BSim();
         sim.setDt(0.05);				    // Set simulation timestep in time units (0.01)
+        									// Let the time units be in hours
         sim.setSimulationTime(100);       	// Specified in time units, could also specify a termination condition elsewhere
         sim.setTimeFormat("0.00");		    // Time Format for display on images
         sim.setBound(simX, simY, simZ);		// Simulation domain Boundaries
@@ -162,13 +210,15 @@ public class BSimPhageFieldTest {
 		/*********************************************************
 		 * Set up the phage field
 		 */
-		final double c = 12e5; 				// Molecules
-		final double decayRate = 0.5;		// Decay rate of phages 
-		final double diffusivity = 5; 		// (Microns)^2/sec
+		final double c = 1e3;        //12e5;// Molecules; Decrease this to see lower concentration
+		final double decayRate = 0.00308;	// Decay rate of phages (M13: 0.074/day), 0.5
+											// 0.074/24hrs = 0.00308/hr
+		final double diffusivity = 3;	 	// (Microns)^2/sec
 		
-		final int field_box_num = 25;		// Number of boxes to represent the chemical field
+		final int field_box_num = 50;		// Number of boxes to represent the chemical field
 		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
 		//80, 80, 1
+		
 		/*********************************************************
 		Initial conditions:
 		 	1) Initial phage distribution in the environment
@@ -177,11 +227,11 @@ public class BSimPhageFieldTest {
 		 */
 		
 		Vector3d initial_phage_pos = new Vector3d(100, 75, 0);
-		final double initial_phage_num = 1e9;   // 1e9
+		final double initial_phage_num = 1e3;   
 		
 		// Case 1
 		if ( !FLOW_IN ) {
-			field.addQuantity( initial_phage_pos, initial_phage_num );	
+			field.addQuantity( initial_phage_pos, initial_phage_num * sim.getDt());	
 		}
 		else {
 			//sim.setLeaky(false, true, false, false, false, false);
@@ -216,7 +266,7 @@ public class BSimPhageFieldTest {
         BufferedReader csvReader = null;
         try {
             // try reading the initial position file
-            csvReader = new BufferedReader(new FileReader("C:\\Users\\sheng\\Documents\\CO-OP_W2021\\Research_Assistant\\Modified_BSim\\onecell.csv"));
+            csvReader = new BufferedReader(new FileReader("C:\\Users\\sheng\\Documents\\CO-OP_W2021\\Research_Assistant\\Catie_BSim\\onecell.csv"));
         } catch (FileNotFoundException e) {
             // If that doesn't work, print out an error
             e.printStackTrace();
@@ -251,7 +301,7 @@ public class BSimPhageFieldTest {
         }
 
         // Now that the data is extracted, we can create the bacterium objects
-       /* for(int j = 0; j < initEndpoints[0].length; j++){
+       /*for(int j = 0; j < initEndpoints[0].length; j++){
         	
             // Initializes the endpoints of each bacterium from the array of endpoints
             // z-dimension is a small number, randomly generated, not sure why.
@@ -262,26 +312,7 @@ public class BSimPhageFieldTest {
             // Pixel to um scaling
 
             // Creates a new bacterium object whose endpoints correspond to the above data
-            Bacterium bac0 = new Bacterium(sim, field, x1, x2);
-
-            // Determine the vector between the endpoints
-            Vector3d dispx1x2 = new Vector3d();
-            dispx1x2.sub(x2,x1); 					// Sub is subtract
-            double length0 = dispx1x2.length(); 	// Determined.
-
-            // If the data suggests that a bacterium is larger than L_max, that bacterium will instead
-            // be initialized with length 1. Otherwise, we set the length in the following if statement
-            // Earlier they were all initialized to length 1.
-            if ( length0 < bac0.L_max ) {
-                bac0.initialise(length0, x1, x2); 	// Redundant to record length, but ok.
-            }
-
-            // Assigns a growth rate and a division length to each bacterium according to a normal distribution
-            double growthRate = growth_stdv*bacRng.nextGaussian() + growth_mean;
-            bac0.setK_growth(growthRate);
-
-            double lengthThreshold = length_stdv*bacRng.nextGaussian()+length_mean;
-            bac0.setElongationThreshold(lengthThreshold);
+            Bacterium bac0 = createBacterium(sim, field, x1, x2);
 
             // Adds the newly created bacterium to our lists for tracking purposes
             bac.add(bac0); 			// For separate subpopulations
@@ -293,8 +324,6 @@ public class BSimPhageFieldTest {
 
 		// Create new phage sensing bacteria objects randomly in space
 		while( bacteriaAll.size() < initialPopulation ) {	
-            double bL = 1. + 0.1*(bacRng.nextDouble() - 0.5);
-            double angle = bacRng.nextDouble()*2*Math.PI;
             
             // Changed position to random (?) for now
             Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x, 
@@ -306,35 +335,12 @@ public class BSimPhageFieldTest {
 					Math.random()*sim.getBound().y, 
 					Math.random()*sim.getBound().z);
             
-            Bacterium bacterium = new Bacterium(sim, field, 
-                    new Vector3d(pos1.x, pos1.y - bL*Math.cos(angle), pos1.z),
-                    new Vector3d(pos2.x, pos2.y + bL*Math.cos(angle), pos2.z)
-            );
-            
-            // Determine the vector between the endpoints
-            Vector3d dispx1x2 = new Vector3d();
-            dispx1x2.sub(pos1, pos2); 					// Sub is subtract
-            double length0 = dispx1x2.length(); 		// Determined.
-
-            // If the data suggests that a bacterium is larger than L_max, that bacterium will instead
-            // be initialized with length 1. Otherwise, we set the length in the following if statement
-            // Earlier they were all initialized to length 1.
-            if ( length0 < bacterium.L_max ) {
-            	bacterium.initialise(length0, pos1, pos2); 	// Redundant to record length, but ok.
-            }
-            
-            // Assigns a growth rate and a division length to each bacterium according to a normal distribution
-            //double growthRate = growth_stdv*bacRng.nextGaussian() + growth_mean;
-            double growthRate = 5.0;
-            bacterium.setK_growth(growthRate);
-
-            double lengthThreshold = length_stdv*bacRng.nextGaussian() + length_mean;
-            bacterium.setElongationThreshold(lengthThreshold);
+            // Creates a new bacterium object whose endpoints correspond to the above data
+            Bacterium bacterium = createBacterium(sim, field, pos1, pos2);
 			
 			// Adds the newly created bacterium to our lists for tracking purposes
 			bac.add(bacterium); 			// For separate subpopulations
-			bacteriaAll.add(bacterium);		// For all cells
-			
+			bacteriaAll.add(bacterium);		// For all cells	
 		}
     
         // Set up stuff for growth. Placeholders for the recently born and dead
@@ -384,14 +390,13 @@ public class BSimPhageFieldTest {
                 startTimeAction = System.nanoTime();
                 
                 /** Allow the flow of phage through a boundary. */
-                final double phage_conc = 1e6;   // 1e9, 1e5
+                final double phage_conc = 1e3;   
                 final double flow_rate = 2;
                 
+                // State enabled where phage flows in through a boundary
                 if ( FLOW_IN ) {
                 	for ( int i = 0; i < field_box_num; i ++ ) {
-                		//field.addQuantity( 0, i, phage_concentration );
-                		//field.addQuantity( 0, i, phage_concentration("constant", phage_concentration, i) );
-                		field.addQuantity( 0, i, 0, phageConc("constant", phage_conc, flow_rate, i) );
+                		field.addQuantity( 0, i, 0, phageConc("constant", phage_conc * sim.getDt(), flow_rate, i) );
                 	}
                 }
 
@@ -427,6 +432,19 @@ public class BSimPhageFieldTest {
                     
                     bac.addAll(bac_born); 					// Adds all the newborn daughters
                     bacteriaAll.addAll(bac_born); 			// Adds all the newborn daughters
+                    
+                    // Fixes the bug where daughter cells stop growing
+                    for ( Bacterium b : bac_born ) {
+                    	
+                        // Assigns a growth rate and a division length to each bacterium according to a normal distribution
+                        //double growthRate = growth_stdv*bacRng.nextGaussian() + growth_mean;
+                        double growthRate = 0.7;
+                        b.setK_growth(growthRate);
+
+                        double lengthThreshold = length_stdv*bacRng.nextGaussian()+length_mean;
+                        b.setElongationThreshold(lengthThreshold);
+                    }
+                    
                     bac_born.clear(); 						// Cleared for next time-step
 
                     // Prints out information about bacteria when u want it to
@@ -458,9 +476,10 @@ public class BSimPhageFieldTest {
                         } 
                         
                         // Remove cell after it shrinks and becomes too small
-                        if ( b.L <= b.L_initial ) {
+                        if ( b.L <= 1 ) {
                         	bac_dead.add(b);
                         }
+                        
                     }
                     bac.removeAll(bac_dead);
                     bacteriaAll.removeAll(bac_dead);
@@ -538,7 +557,7 @@ public class BSimPhageFieldTest {
             @Override
             public void time() {
                 p3d.fill(0);
-//                p3d.text(sim.getFormattedTimeHours(), 50, 50);
+                //p3d.text(sim.getFormattedTimeHours(), 50, 50);
                 p3d.text(sim.getFormattedTime(), 50, 50);
             }
 
@@ -676,7 +695,6 @@ public class BSimPhageFieldTest {
             sumLogger.setDt(10);			// Set export time step
             sim.addExporter(sumLogger);
 
-
             /**
              * Export a rendered image file
              */
@@ -686,7 +704,6 @@ public class BSimPhageFieldTest {
             sim.addExporter(imageExporter);
 
             sim.export();
-
 
             /**
              * Drawing a java plot once we're done?
@@ -705,20 +722,6 @@ public class BSimPhageFieldTest {
         System.out.println("Total simulation time: " + (simulationEndTime - simulationStartTime)/1e9 + " sec.");
         
     }
-    
-    /** Returns the concentration as a function */
-    public double phageConc( String func, double conc, double flow_rate, int x ) {
-    	if ( func == "constant" ) {
-    		return conc * flow_rate;
-    	}
-    	else if ( func == "linear" ) {
-    		return conc * flow_rate * x;
-    	}
-    	else {
-    		return 0.0;
-    	}
-    }
-    
     
     
 }

@@ -1,9 +1,13 @@
 package Winter2021;
 
 import bsim.BSim;
+
 import bsim.BSimChemicalField;
 import bsim.capsule.BSimCapsuleBacterium;
 import javax.vecmath.Vector3d;
+
+import com.beust.jcommander.Parameter;
+
 import java.awt.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -13,20 +17,29 @@ import java.lang.Math;
 /**
  */
 public class Bacterium extends BSimCapsuleBacterium {
+	
+    // these fields are used to build a tree structure to keep track
+    // of lineage - Sohaib Nadeem
+    private List<Bacterium> children;
+    private Bacterium parent;
 
 	/** Chemical field of the simulation. */
 	private BSimChemicalField field;
 	
 	/** Concentration of phage produced by a bacterium. */
-	final private double productionConc;				
-	/** Phage production delay in a bacterium (In milliseconds). */
-	final private long productionDelay;				 
-	/** Bacterium life span after infection (In milliseconds). */
-	final private long lifeSpan;					
+	final private double phageNum;				
+	/** Phage production delay in a bacterium (In hours). */
+	final private long productionDelay;		
+	/** Bacterium life span after infection (In hours). */
+	private int lifeSpan;					
 	/** Threshold of phage density for bacterium to become infected [Molecules/(micron)^3]. */
 	final private double threshold;  
-	/** Rate the cell shrinks when undergoing cell death. */
-	final private double shrinkRate;		
+	
+	/** Phage production delay counter in a bacterium. */
+	private int pDelayCount;	
+	/** Life span counter in a bacterium. */
+	private int lifeCount;	
+	/** Counter for asymmetric growth (in hours). */
 	
 	/** Status of phage occupation within bacterium. */
 	private boolean infected;
@@ -34,8 +47,94 @@ public class Bacterium extends BSimCapsuleBacterium {
 	private boolean production;			
 	/** Flag for cell death. */
 	private boolean isDying;	
-	/** Timer to schedule internal phage production. */
-    protected Timer timer;
+	
+    // Function you call when you want to make a new bacterium object
+    public Bacterium(BSim sim, BSimChemicalField field, Vector3d px1, Vector3d px2){
+    	
+        // "Bacterium" is a type of capsule bacterium, so we need to do all the things that a CapsuleBacterium does first.
+        // This is the purpose of super(). The function super() initializes this bacterium object by first
+        // referring to it as a capsulebacterium.
+        super(sim, px1, px2);
+        
+        this.field = field;						
+        phageNum = 1000;				//1e6;	// 1000 phages/hr
+        productionDelay = 2; 			// hrs // #ticks = productionDelay / getDt()
+        lifeSpan = 20;					// hrs
+        threshold = 1e2;	
+        
+        pDelayCount = 0;
+        lifeCount = 0;
+        
+        infected = false;
+        production = false;
+        isDying = false;  
+        
+        // initialize fields for lineage tree - Sohaib Nadeem
+        children = new ArrayList<>();
+        parent = null;
+    }
+
+    // In case we want our bacteria to do anything special, we can add things to action() here that an ordinary
+    // capsulebacterium wouldn't do.
+    @Override
+    public void action() { 						// Runs at every time step
+        super.action();
+        
+        /** Updated to allow phage infection and production. */
+        
+		// Infection occurs if phage concentration around cell exceeds a certain threshold
+		if( field.getConc(position) > getThreshold() ) {
+			setInfected( true ); 				// Update infection status
+		}
+		
+		// Cell behavior is changed when infected
+		if ( isInfected() ) {
+			
+	        // Assigns a growth rate to infected bacterium according to a normal distribution
+			// Infected cells have lower growth rate
+			Random bacRng = new Random();
+			
+		    double inf_growth_stdv = 0.0434;		// From stork paper
+		    double inf_growth_mean = 0.217;			// From stork paper (0.217 +-0.0434/hr)
+		    
+	        double infectedGrowthRate = inf_growth_stdv * bacRng.nextGaussian() + inf_growth_mean;
+	        setK_growth(infectedGrowthRate);
+	        
+	        // Cell Death
+		    double shrink_stdv = 0.0434;			// From stork paper
+		    double shrink_mean = -0.217;			// From stork paper (-0.217 +-0.0434/hr)
+		    
+	        double shrinkRate = shrink_stdv * bacRng.nextGaussian() + shrink_mean;
+			
+			// Cell death
+			if ( lifeCount == lifeSpan / sim.getDt() ) {
+	    		setDying(true);						// Cell death begins
+	    		setK_growth(shrinkRate);			// Cell starts shrinking
+	    		setProduction(false); 				// Cell stops producing phage
+			}
+			else {
+				lifeCount ++;						// Update counter for life span
+			}
+		    
+			if ( isProducing() ) {					// Steady production of phage (phage/hr)
+				field.addQuantity(position, phageNum * sim.getDt() );	
+			}
+			
+			// Accounts for the delay regarding internal infection dynamics 
+			// when first being infected
+			else {									
+				if ( pDelayCount == productionDelay / sim.getDt() ) {	// Delay in hours
+					setProduction( true );
+				}
+				pDelayCount ++;
+			}
+		}
+    }
+    
+    /** Sets the life span of a bacterium. */
+    public void setLifeSpan( int lifeSpan ) {
+    	this.lifeSpan = lifeSpan;
+    }
     
     /** Sets the status of phage infection for a bacterium. */
     public void setInfected( boolean infected) {
@@ -68,86 +167,10 @@ public class Bacterium extends BSimCapsuleBacterium {
     }
     
     /** Sets the flag for cell death. */
-    public void setDying( boolean d) {
+    public void setDying( boolean d ) {
         this.isDying = d;
     }
-	
-    // Function you call when you want to make a new bacterium object
-    public Bacterium(BSim sim, BSimChemicalField field, Vector3d px1, Vector3d px2){
-    	
-        // "Bacterium" is a type of capsule bacterium, so we need to do all the things that a CapsuleBacterium does first.
-        // This is the purpose of super(). The function super() initializes this bacterium object by first
-        // referring to it as a capsulebacterium.
-        super(sim, px1, px2);
-        
-        this.field = field;						
-        productionConc = 1e6;
-        productionDelay = 2000;
-        lifeSpan = 4000;
-        threshold = 1e5;
-        shrinkRate = -1;
-        
-        infected = false;
-        production = false;
-        isDying = false;  
-
-        timer = new Timer();
-    }
-
-    // In case we want our bacteria to do anything special, we can add things to action() here that an ordinary
-    // capsulebacterium wouldn't do.
-    @Override
-    public void action() { 						// Runs at every time step
-        super.action();
-        
-        /** Cell death. */
-        
-	    TimerTask cellDeath = new TimerTask() {
-	    	public void run() {
-	    		setDying(true);					// Cell death begins
-	    		setK_growth(shrinkRate);		// Cell starts shrinking
-	    		setProduction(false); 			// Cell stops producing phage
-			}
-	    };
-	    timer.schedule(cellDeath, lifeSpan);
-        
-        /** Updated to allow phage infection and production. */
-        
-		// Infection occurs if current phage concentration exceeds a certain threshold
-		if( field.getConc(position) > getThreshold() ) {
-			setInfected( true ); 				// Update infection status
-		}
-		
-		// Accounts for the delay regarding internal infection dynamics 
-		// when first being infected
-		if ( isInfected() ) {
-			
-			if ( !isDying ) {
-				double infectedGrowthRate = 1;		// 0.05
-	    		setK_growth(infectedGrowthRate);	// Update growth rate
-			}
-			else {
-				setK_growth(shrinkRate);			// Update growth rate
-			}
-		    
-			if ( isProducing() ) {
-				field.addQuantity(position, productionConc);	
-			}
-			else {
-				// Internal production delay when first infected
-			    TimerTask task = new TimerTask() {
-			    	public void run() {
-			    		field.addQuantity(position, productionConc);
-			    		setProduction( true );
-					}
-			    };
-			    timer.schedule(task, productionDelay);
-			}
-			
-		}
-			
-    }
-
+    
     // Allows us to change growth rate mechanics for individual cells
     @Override
     public void setK_growth(double k_growth) {
@@ -156,6 +179,12 @@ public class Bacterium extends BSimCapsuleBacterium {
 
     // Allows us to change the division threshold of individual cells
     public void setElongationThreshold(double len) { this.L_th=len; }
+    
+    // for lineage tree - Sohaib Nadeem
+    public void addChild(Bacterium child) {
+        children.add(child);
+        child.parent = this;
+    }
 
     // This function is called when the bacterium has passed its' division threshold and is ready to divide.
     public Bacterium divide() {
@@ -192,12 +221,19 @@ public class Bacterium extends BSimCapsuleBacterium {
         longVec2.scaleAdd(-1,longVec);
         x1_child.add(longVec2); 						// Push applied to child cell
 
-
         // Set the child cell.
         // Creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
         Bacterium child = new Bacterium(sim, field, x1_child, new Vector3d(this.x2));
-        this.initialise(L1, this.x1, x2_new);
+        //this.initialise(L1, this.x1, x2_new);
+        												// Asymmetrical growth occurs at division node
+        this.initialise(L1, x2_new, this.x1);			// Swap x1 and x2 for the mother after division for asymmetrical elongation
         child.L = L2;
+        
+        // add child to list of children - Sohaib Nadeem
+        addChild(child);
+                
+        // Calculate angle between daughter cells at division - Sheng Fang
+        angle_initial = coordinate(child);
 
         // Prints a line whenever a new bacterium is made
         System.out.println("Child ID id " + child.id);
