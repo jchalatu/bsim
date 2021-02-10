@@ -32,7 +32,7 @@ import java.io.File;
 
 /**
  * 
- * This class simulates cross-protection mutualism in a double antibiotic environment.
+ * This class simulates cross-protection mutualism in an environment with two antibiotics.
  * If the density of antibiotic around a bacteria is above a certain threshold, the bacteria
  * will stop growing and eventually die.
  * Each bacteria may decay the antibiotic field up until a certain radius.
