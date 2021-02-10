@@ -39,9 +39,6 @@ import java.io.File;
  * will become infected.
  * Infected bacteria will produce and release phages into the surrounding medium.
  * 
- * Three initial conditions are available to simulate from.
- *
- *
  */
 public class BSimPhageField {
 	
@@ -50,8 +47,6 @@ public class BSimPhageField {
     
     /** Whether to flow phage in through the side of the boundary. */
     private static final boolean FLOW_IN = true;
-    
-    //static Random bacRng;
     
     // Boundaries
     // Boolean flag: specifies whether any walls are needed
@@ -89,12 +84,10 @@ public class BSimPhageField {
 
     //growth rate standard deviation
     @Parameter(names="-gr_stdv",arity=1,description = "growth rate standard deviation")
-    //public static double growth_stdv = 0.05;		
-    public static double growth_stdv = 0.277;		// From storck paper
-    //growth rate mean
+    public static double growth_stdv = 0.02;		
+    //public static double growth_stdv = 0.277;		// From storck paper
     @Parameter(names="-gr_mean",arity=1,description = "growth rate mean")
-    //public static double growth_mean = 0.2;
-    public static double growth_mean = 0.6;
+    public static double growth_mean = 0.5;
     //public static double growth_mean = 1.23;		// From storck paper (1.23 +- 0.277/hr)
 
     //elongation threshold standard deviation
@@ -129,18 +122,14 @@ public class BSimPhageField {
     	Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
         
-        // Changed position to random (?) for now
-        /*Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x, 
+        // Random initial positions 
+        Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x, 
 				Math.random()*sim.getBound().y, 
 				Math.random()*sim.getBound().z);
-        
-        // Changed position to random (?) for now
+				
         Vector3d pos2 = new Vector3d(Math.random()*sim.getBound().x, 
 				Math.random()*sim.getBound().y, 
-				Math.random()*sim.getBound().z);*/
-        
-        Vector3d pos1 = new Vector3d(40, 20, 1);
-        Vector3d pos2 = new Vector3d(41, 21, 1);
+				Math.random()*sim.getBound().z);
         
         // Creates a new bacterium object whose endpoints correspond to the above data
         PhageFieldBacterium bacterium = new PhageFieldBacterium(sim, field, pos1, pos2);
@@ -158,8 +147,7 @@ public class BSimPhageField {
         }
 
         // Assigns a growth rate and a division length to bacterium according to a normal distribution
-        //double growthRate = growth_stdv * bacRng.nextGaussian() + growth_mean;/////////////
-        double growthRate = 0.5;
+        double growthRate = growth_stdv * bacRng.nextGaussian() + growth_mean;
         bacterium.setK_growth(growthRate);
         
         double lengthThreshold = length_stdv * bacRng.nextGaussian() + length_mean;
@@ -217,24 +205,22 @@ public class BSimPhageField {
 		/*********************************************************
 		 * Set up the phage field
 		 */
-		final double c = 1e3;        //12e5;// Molecules; Decrease this to see lower concentration
+		final double c = 1e3;        		// Molecules; Decrease this to see lower concentration
 		final double decayRate = 0.00308;	// Decay rate of phages (M13: 0.074/day), 0.5
 											// 0.074/24hrs = 0.00308/hr
 		final double diffusivity = 3;	 	// (Microns)^2/sec
 		
 		final int field_box_num = 50;		// Number of boxes to represent the chemical field
 		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
-		//80, 80, 1
 		
 		/*********************************************************
 		Initial conditions:
 		 	1) Initial phage distribution in the environment
-			2) Phage introduction rate from the boundary (constant or time-varying)
-			3) Identify each initial cell as infected or not.
+			2) Phage introduction rate from the boundary
 		 */
 		
-		Vector3d initial_phage_pos = new Vector3d(100, 75, 0);
-		final double initial_phage_num = 1e3;   
+		Vector3d initial_phage_pos = new Vector3d(25, 30, 0);
+		final double initial_phage_num = 1e7;   
 		
 		// Case 1
 		if ( !FLOW_IN ) {
@@ -453,8 +439,7 @@ public class BSimPhageField {
                     for ( PhageFieldBacterium b : bac_born ) {
                     	
                         // Assigns a growth rate and a division length to each bacterium according to a normal distribution
-                        //double growthRate = growth_stdv*bacRng.nextGaussian() + growth_mean;
-                        double growthRate = 0.5;
+                        double growthRate = growth_stdv*bacRng.nextGaussian() + growth_mean;
                         b.setK_growth(growthRate);
 
                         double lengthThreshold = length_stdv*bacRng.nextGaussian()+length_mean;
