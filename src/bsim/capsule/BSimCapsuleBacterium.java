@@ -219,23 +219,9 @@ public class BSimCapsuleBacterium {
         else {
             internalPotential = -0.5 * k_int * Math.pow(lengthDiff, 2);
         }
-        
-        /** Updated to implement asymmetrical elongation. */
-        
-        // Elongate symmetrically after the threshold is met
-        if ( L >= L_asym ) {
-            this.x1force.scaleAdd(-internalPotential, seg, this.x1force);
-            this.x2force.scaleAdd(internalPotential, seg, this.x2force);
-        }
-        // Elongate asymmetrically until the length threshold is met
-        else {
-        	this.x1force.scaleAdd(-internalPotential, seg, this.x1force);
-        }
-        
-        /*
+
         this.x1force.scaleAdd(-internalPotential, seg, this.x1force);
-        this.x2force.scaleAdd(internalPotential, seg, this.x2force);		
-        */
+        this.x2force.scaleAdd(internalPotential, seg, this.x2force);
     }
 
     // computes the force acting on the cell from walls below the cell (wall overlap)
@@ -855,6 +841,29 @@ public class BSimCapsuleBacterium {
         d.sub(this.x1 ,this.x2);
         double direction = d.angle(new Vector3d(1,0,0));
         return direction;
+    }
+
+    // angle from y-axis between -90 and 90 used by cell profiler - Sohaib Nadeem
+    public double cell_profiler_angle() {
+        Vector3d d = new Vector3d();
+        d.sub(this.x1 ,this.x2);
+        /*
+        if (d.y < 0) {
+            d.scale(-1);
+        }
+        return d.angle(new Vector3d(1,0,0)) - Math.PI / 2;
+         */
+        double angle = d.angle(new Vector3d(0,1,0));
+        if (d.x < 0) {
+            angle *= -1;
+        }
+        if (angle > Math.PI / 2) {
+            angle -= Math.PI;
+        }
+        if (angle < -Math.PI / 2) {
+            angle += Math.PI;
+        }
+        return angle;
     }
 
 }

@@ -16,9 +16,10 @@ public class CellProfilerLogger extends BSimLogger {
         this.bacteriaAll = bacteriaAll;
     }
 
+    // Updated to add angle between daughter cells, "Division_Angle"
     @Override
     public void before() {
-        super.before();					// Updated to add angle between daughter cells, "Division_Angle"
+        super.before();
         String CellProfilerFields = "ImageNumber,ObjectNumber,AreaShape_Area,AreaShape_BoundingBoxArea," +
                 "AreaShape_BoundingBoxMaximum_X,AreaShape_BoundingBoxMaximum_Y,AreaShape_BoundingBoxMinimum_X," +
                 "AreaShape_BoundingBoxMinimum_Y,AreaShape_Center_X,AreaShape_Center_Y,AreaShape_Compactness," +
@@ -122,10 +123,10 @@ public class CellProfilerLogger extends BSimLogger {
         final String Fields_AB_to_CU = new String(temp);
          */
         String temp = "";
-        for(int i = 0; i < 6; i++) {
+        for(int i = 0; i < 5; i++) {
             temp += "-,";
         }
-        final String Fields_C_to_H = new String(temp);
+        final String Fields_D_to_H = new String(temp);
 
         temp = "";
         for(int i = 0; i < 6; i++) {
@@ -154,18 +155,18 @@ public class CellProfilerLogger extends BSimLogger {
                     "-,-,-,-," + (b.id + 1) + "," + "-,-,-,-," +
                     "-,-," + b.L + "," + b.direction() + "\n";
             */
-            buffer += ((int) (sim.getTimestep() * sim.getDt() / dt) + 1) + "," + (b.id + 1) + "," + Fields_C_to_H +
+            double area = (Math.PI * b.radius * b.radius + 2 * b.radius * b.L) * 13.89 * 13.89;
+            buffer += ((int) (sim.getTimestep() * sim.getDt() / dt) + 1) + "," +
+                    (b.id + 1) + "," + area + "," + Fields_D_to_H +
                     (b.position.x * NeighbourInteractions.pixel_to_um_ratio) + "," +
                     (b.position.y  * NeighbourInteractions.pixel_to_um_ratio) + "," + Fields_K_to_P +
                     (b.L + 2 * b.radius) * NeighbourInteractions.pixel_to_um_ratio + "," + Fields_R_to_V +
                     (2 * b.radius) * NeighbourInteractions.pixel_to_um_ratio + "," +
-                    (b.direction() - Math.PI / 2) + "," + Fields_Y_to_AB +
+                    b.cell_profiler_angle() + "," + Fields_Y_to_AB +
                     (b.position.x * NeighbourInteractions.pixel_to_um_ratio) + "," +
                     (b.position.y * NeighbourInteractions.pixel_to_um_ratio) + "," +
-                    (b.id + 1) + "," + (b.id + 1) + "," + 
-                    "-," +		// Updated to add angle between daughter cells
-                    (b.angle_initial) + "," +
-                    "-\n";
+                    (b.id + 1) + "," + (b.id + 1) + "," + "-," +
+                    b.angle_initial + "\n";
         }
         write(buffer);
     }

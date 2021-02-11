@@ -89,6 +89,7 @@ public class Bacterium extends BSimCapsuleBacterium {
         //creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
         Bacterium child = new Bacterium(sim, x1_child, new Vector3d(this.x2));
         this.initialise(L1, this.x1, x2_new);
+        //this.initialise(L1, x2_new, this.x1); for asymmetric growth
         child.L = L2;
 
         // add child to list of children - Sohaib Nadeem

@@ -29,8 +29,8 @@ public class NeighbourInteractions {
 
     // Sohaib Nadeem
     static final double pixel_to_um_ratio = 13.89;
-    final double width_pixels = 700;
-    final double height_pixels = 250;
+    final int width_pixels = 700;
+    final int height_pixels = 250;
     final double width_um = width_pixels / pixel_to_um_ratio; // should be kept as constants for cell prof.
     final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
 
@@ -66,10 +66,10 @@ public class NeighbourInteractions {
 
     //growth rate standard deviation
     @Parameter(names="-gr_stdv",arity=1,description = "growth rate standard deviation")
-    public static double growth_stdv=0.05;
+    public static double growth_stdv=0.2;
     //growth rate mean
     @Parameter(names="-gr_mean",arity=1,description = "growth rate mean")
-    public static double growth_mean=0.2;
+    public static double growth_mean=2.1;
 
     //elongation threshold standard deviation
     @Parameter(names="-len_stdv",arity=1,description = "elongation threshold standard deviation")
@@ -146,7 +146,7 @@ public class NeighbourInteractions {
         // create the simulation object
         final BSim sim = new BSim();
         sim.setDt(0.05);				    // set Simulation Timestep in time units
-        sim.setSimulationTime(100);       // specified in time units, could also specify a termination condition elsewhere
+        sim.setSimulationTime(3.0);       // specified in time units, could also specify a termination condition elsewhere
         sim.setTimeFormat("0.00");		    // Time Format for display on images
         sim.setBound(simX, simY, simZ);		// Simulation domain Boundaries
 
@@ -199,7 +199,7 @@ public class NeighbourInteractions {
 
                 if ( (int) cell_info[0] == 1 ) {
                     double cell_length = ( cell_info[16] - cell_info[22] ) / pixel_to_um_ratio;
-                    double cell_orientation = cell_info[23] + (Math.PI / 2);
+                    double cell_orientation = -1 * (cell_info[23] + (Math.PI / 2));
                     double cell_center_x = cell_info[8] / pixel_to_um_ratio;
                     double cell_center_y = cell_info[9] / pixel_to_um_ratio;
 
@@ -406,7 +406,7 @@ public class NeighbourInteractions {
         /*********************************************************
          * Set up the drawer
          */
-        BSimDrawer drawer = new BSimP3DDrawer(sim, 600, 350) {
+        BSimDrawer drawer = new BSimP3DDrawer(sim, width_pixels, height_pixels) {
             /**
              * Draw the default cuboid boundary of the simulation as a partially transparent box
              * with a wireframe outline surrounding it.
@@ -493,6 +493,8 @@ public class NeighbourInteractions {
             String filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
 //            String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
 
+            double export_time = 0.5; // was 10, and simulation time was 100 - Sohaib Nadeem
+
             /*********************************************************
              * Various properties of the simulation, for future reference.
              */
@@ -520,7 +522,7 @@ public class NeighbourInteractions {
 
                 }
             };
-            metaLogger.setDt(10);//3600);			// Set export time step
+            metaLogger.setDt(export_time);//3600);			// Set export time step
             sim.addExporter(metaLogger);
 
             BSimLogger posLogger = new BSimLogger(sim, filePath + "position.csv") {
@@ -558,7 +560,7 @@ public class NeighbourInteractions {
 
                 }
             };
-            posLogger.setDt(10);			// set export time step for csv file
+            posLogger.setDt(export_time);			// set export time step for csv file
             sim.addExporter(posLogger);
 
 
@@ -595,7 +597,7 @@ public class NeighbourInteractions {
                     write(buffer);
                 }
             };
-            sumLogger.setDt(10);			// Set export time step
+            sumLogger.setDt(export_time);			// Set export time step
             sim.addExporter(sumLogger);
 
 
@@ -605,14 +607,14 @@ public class NeighbourInteractions {
              * Export a rendered image file
              */
             BSimPngExporter imageExporter = new BSimPngExporter(sim, drawer, filePath );
-            imageExporter.setDt(10); //this is how often it will output a frame
+            imageExporter.setDt(0.05); //this is how often it will output a frame
             // separate time-resolution for images vs excel file
             sim.addExporter(imageExporter);
 
 
             // Export a csv file that matches CellProfiler's output
             CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv", bacteriaAll);
-            cp_logger.setDt(10);			// Set export time step
+            cp_logger.setDt(export_time);			// Set export time step
             sim.addExporter(cp_logger);
 
             sim.export();
