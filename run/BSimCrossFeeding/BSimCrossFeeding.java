@@ -11,6 +11,7 @@ import bsim.draw.BSimDrawer;
 import bsim.draw.BSimP3DDrawer;
 import bsim.export.BSimLogger;
 import bsim.export.BSimPngExporter;
+import bsim.winter2021.P3DDrawer;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -144,13 +145,13 @@ public class BSimCrossFeeding {
 				Math.random()*sim.getBound().z);*/
         
         // Initiates bacteria closer together
-        Vector3d pos1 = new Vector3d(20 + Math.random()*sim.getBound().x/3, 
-				10 + Math.random()*sim.getBound().y/2, 
+        Vector3d pos1 = new Vector3d(20 + Math.random()*sim.getBound().x/4, 
+				15 + Math.random()*sim.getBound().y/3, 
 				Math.random()*sim.getBound().z);
         
         // Changed position to random (?) for now
-        Vector3d pos2 = new Vector3d(20 + Math.random()*sim.getBound().x/3, 
-				10 + Math.random()*sim.getBound().y/2, 
+        Vector3d pos2 = new Vector3d(20 + Math.random()*sim.getBound().x/4, 
+				15 + Math.random()*sim.getBound().y/3, 
 				Math.random()*sim.getBound().z);
         
         // Creates a new bacterium object whose endpoints correspond to the above data
@@ -473,7 +474,7 @@ public class BSimCrossFeeding {
         /*********************************************************
          * Set up the drawer
          */
-        BSimDrawer drawer = new BSimP3DDrawer(sim, 800, 600) {	//2752, 2208
+        BSimDrawer drawer = new P3DDrawer(sim, 800, 600) {	//2752, 2208
             /**
              * Draw the default cuboid boundary of the simulation as a partially transparent box
              * with a wireframe outline surrounding it.
