@@ -358,67 +358,7 @@ public class BSimCrossProtection {
         // Specify output file path
         String systemPath = new File("").getAbsolutePath()+"\\SingleCellSims";
 
-        // Creates a new csvreader object which can extract data from .csv files
-        BufferedReader csvReader = null;
-        try {
-            // try reading the initial position file
-            csvReader = new BufferedReader(new FileReader("C:\\Users\\sheng\\Documents\\CO-OP_W2021\\Research_Assistant\\Catie_BSim\\onecell.csv"));
-        } catch (FileNotFoundException e) {
-            // If that doesn't work, print out an error
-            e.printStackTrace();
-        }
- 
-        // If loading the content works, try reading the data
-        // Updated: Previous version gave Exception in thread "main" java.lang.NumberFormatException: empty String
-        try {
-        	
-            // Goes through each row of the excel sheet and pulls out the initial positions
-            String row = csvReader.readLine();
-            int i = 0;
-            while (row != null) {
-            	
-                // Row.split takes a single line of the excel sheet and chops it up into the columns
-                // mapToDouble takes the values in those columns and converts them to Java double data format
-                // toArray converts the data into an array
-            	
-            	// In case of empty string, first check that the row is not blank
-            	if (!row.isBlank()) {
-            		initEndpoints[i] = Arrays.stream(row.split(",")).mapToDouble(Double::parseDouble).toArray();
-            		
-            		i ++;
-            	}
-            	row = csvReader.readLine();
-            }
-            csvReader.close(); 				// Close the file once all data is extracted    
-        }
-        
-        catch(IOException e) {
-            e.printStackTrace(); 			// If there is an error, this will just print out the message
-        }
-        
-        /*
-        // Now that the data is extracted, we can create the bacterium objects
-       for(int j = 0; j < initEndpoints[0].length; j++){
-        	
-            // Initializes the endpoints of each bacterium from the array of endpoints
-            // z-dimension is a small number, randomly generated, not sure why.
-            Vector3d x1 = new Vector3d(initEndpoints[0][j]/13.89,initEndpoints[1][j]/13.89,bacRng.nextDouble()*0.1*(simZ - 0.1)/2.0);
-            Vector3d x2 = new Vector3d(initEndpoints[2][j]/13.89,initEndpoints[3][j]/13.89,bacRng.nextDouble()*0.1*(simZ - 0.1)/2.0);
-            // Note: the endpoint positions are scaled by 13.89, since the images are a bit more than 2000 pixels wide
-            // While the simulation is rougly 200 micrometers. the conversion factor ends up being 13.89
-            // Pixel to um scaling
-
-            // Creates a new bacterium object whose endpoints correspond to the above data
-            Bacterium bac0 = createBacterium(sim, field, x1, x2);
-
-            // Adds the newly created bacterium to our lists for tracking purposes
-            bac.add(bac0); 			// For separate subpopulations
-            bacteriaAll.add(bac0);  // For all cells
-        	
-        } */
-
 		// Create two sub-populations of bacteria objects randomly in space
-		
         // Creates a new bacterium object whose endpoints correspond to the above data
         CrossProtectionBacterium bacteriumA = createBacterium( sim, antibioticA, antibioticB );
         CrossProtectionBacterium bacteriumB = createBacterium( sim, antibioticB, antibioticA );
@@ -429,7 +369,6 @@ public class BSimCrossProtection {
 		bacteriaAll.add(bacteriumA);		// For all cells	
 		bacteriaAll.add(bacteriumB);		// For all cells	
 		
-
         // Internal machinery - dont worry about this line
         // Some kind of initialize of mover
         final Mover mover;
@@ -640,6 +579,7 @@ public class BSimCrossProtection {
 
                 scene(p3d);
                 boundaries();
+                //reference();
                 time();
 
                 p3d.endDraw();
