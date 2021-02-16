@@ -25,8 +25,8 @@ public class CrossProtectionBacterium extends Bacterium {
 	protected BSimChemicalField antibiotic_field;
 	
 	/** Initial growth rate of the bacteria. */
-	final private double initial_growth_mean = 0.5;
-	final private double initial_growth_stdv = 0.02;
+	final private double initial_growth_mean = 0.2;
+	final private double initial_growth_stdv = 0.05;
 	final private double initial_growth_rate;
 	
 	/** Scales the growth rate of the bacteria. */
@@ -55,9 +55,9 @@ public class CrossProtectionBacterium extends Bacterium {
         this.resistant_field = resistant;
         
         growth_threshold = 1e2;
-        death_threshold = 4e2;	
+        death_threshold = 3e2;//4e2;	
         production = true;
-        enzymeNum = 1e3;
+        enzymeNum = 3e3;//2e3;//1e3;
         
     	Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
