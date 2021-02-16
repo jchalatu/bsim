@@ -11,6 +11,7 @@ import bsim.draw.BSimDrawer;
 import bsim.draw.BSimP3DDrawer;
 import bsim.export.BSimLogger;
 import bsim.export.BSimPngExporter;
+import bsim.winter2021.P3DDrawer;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -37,15 +38,36 @@ import java.io.File;
  * will stop growing and eventually die.
  * Each bacteria may decay the antibiotic field up until a certain radius.
  *
- *
  */
 public class BSimCrossProtection {
+	
+	// Initial Conditions
+	/** Toxins flow in from the left boundary. */
+	private static final int FLOW_IN = 1;
+	/** Simulation starts with an uniform distribution of toxin. */
+	private static final int UNIFORM = 2;
+	
+	/** Used to determine the toxin distribution for the simulation. */
+	private int sim_condition = 1;
 	
     /** Whether to enable growth in the ticker etc. or not... */
     private static final boolean WITH_GROWTH = true;
     
-    /** Whether to flow antibiotic in through the side of the boundary. */
-    private static final boolean FLOW_IN = true;
+    /** Flag to allow toxin drip. */
+    private static final boolean DRIP = false;
+    /** Delay between toxinA drips (hrs). */
+    private double drip_delayA = 4;
+    /** Counter for delay between toxinA drips. */
+    private double drip_countA = 0;	
+    /** Delay between toxinA drips (hrs). */
+    private double drip_delayB = 4;
+    /** Counter for delay between toxinB drips. */
+    private double drip_countB = 0;
+    /** Quantity of toxinA for each drip. */
+    private double drip_quantityA = 4e4;
+    /** Quantity of toxinB for each drip. */
+    private double drip_quantityB = 4e4;
+    
     
     // Boundaries
     // Boolean flag: specifies whether any walls are needed
@@ -151,13 +173,13 @@ public class BSimCrossProtection {
 				Math.random()*sim.getBound().z);*/
         
         // Initiates bacteria closer together
-        Vector3d pos1 = new Vector3d(20 + Math.random()*sim.getBound().x/3, 
-				10 + Math.random()*sim.getBound().y/2, 
+        Vector3d pos1 = new Vector3d(30 + Math.random()*sim.getBound().x/4, 
+				15 + Math.random()*sim.getBound().y/3, 
 				Math.random()*sim.getBound().z);
         
         // Changed position to random (?) for now
-        Vector3d pos2 = new Vector3d(20 + Math.random()*sim.getBound().x/3, 
-				10 + Math.random()*sim.getBound().y/2, 
+        Vector3d pos2 = new Vector3d(30 + Math.random()*sim.getBound().x/4, 
+				15 + Math.random()*sim.getBound().y/3, 
 				Math.random()*sim.getBound().z);
         
         // Creates a new bacterium object whose endpoints correspond to the above data
@@ -233,6 +255,19 @@ public class BSimCrossProtection {
         bacteriaAll.removeAll(bac_dead);
         bac_dead.clear();
     }
+    
+    /** Adds toxin to a random position within the boundary of the environment. */
+    public void dripToxin( BSim sim, BSimChemicalField field, double quantity ) {
+    	Random bacRng = new Random(); 		// Random number generator
+        bacRng.setSeed(50); 				// Initializes random number generator
+        
+        // Determine a random position to add toxin
+        Vector3d pos = new Vector3d(Math.random()*sim.getBound().x, 
+				Math.random()*sim.getBound().y, 
+				Math.random()*sim.getBound().z);
+        
+        field.addQuantity(pos, quantity);
+    }
 
     // This function does a lot. let's break it down
     // 1. Initializes simulation (how long it runs, etc)
@@ -270,7 +305,7 @@ public class BSimCrossProtection {
 		/*********************************************************
 		 * Set up the antibiotic field
 		 */
-		final double c = 4.5e2;       				// Molecules; Decrease this to see lower concentration
+		final double c = 4.3e2;//4.5e2;       		// Molecules; Decrease this to see lower concentration
 		final double decayRate = 0.0;				// Decay rate of antibiotics
 		final double diffusivity = 7.0;				// (Microns)^2/sec
 		
@@ -286,7 +321,7 @@ public class BSimCrossProtection {
 		double initial_conc = 3e2;//4e2;
 		
 		// Case 1: Antibiotics are initially present throughout the entire domain at a fixed concentration
-		if ( !FLOW_IN ) {
+		if ( sim_condition == UNIFORM ) {
 			
 			antibioticA.linearGradient(0, initial_conc, initial_conc);
 			antibioticB.linearGradient(0, initial_conc, initial_conc);
@@ -445,7 +480,7 @@ public class BSimCrossProtection {
                 int version = 2;
                 
                 // State enabled where antibiotic flows in through a boundary
-                if ( FLOW_IN ) {
+                if ( sim_condition == FLOW_IN ) {
                 	if ( version == VER1 ) {
                 		final double conc = 1e3; 
                     	if ( endpoint_x < field_box_num ) {
@@ -480,6 +515,27 @@ public class BSimCrossProtection {
                     		antibioticA.addQuantity( 0, i, 0, conc * sim.getDt() );
                     		antibioticB.addQuantity( 0, i, 0, conc * sim.getDt() );
                     	}
+                	}
+                }
+                
+                // State enable to allow toxins to drip into environment
+                if ( DRIP ) {
+                	
+                	// Create a delay between adding quantities of toxin
+                	if ( drip_countA >= drip_delayA ) {
+                		dripToxin( sim, antibioticA, drip_quantityA );
+                		drip_countA = 0;
+                	}
+                	else {
+                		drip_countA += sim.getDt();
+                	}
+                	
+                	if ( drip_countB >= drip_delayB ) {
+                		dripToxin( sim, antibioticB, drip_quantityB );
+                		drip_countB = 0;
+                	}
+                	else {
+                		drip_countB += sim.getDt();
                 	}
                 }
 
@@ -545,7 +601,7 @@ public class BSimCrossProtection {
         /*********************************************************
          * Set up the drawer
          */
-        BSimDrawer drawer = new BSimP3DDrawer(sim, 800, 600) {	//2752, 2208
+        BSimDrawer drawer = new P3DDrawer(sim, 800, 600) {	//2752, 2208
             /**
              * Draw the default cuboid boundary of the simulation as a partially transparent box
              * with a wireframe outline surrounding it.
@@ -605,9 +661,23 @@ public class BSimCrossProtection {
                 p3d.ambientLight(128, 128, 128);
                 p3d.directionalLight(128, 128, 128, 1, 1, -1);
                 
-				// Draw the antibiotic field
-                draw2D(antibioticA, Color.MAGENTA, (float)(255/c));	
-                draw2D(antibioticB, Color.CYAN, (float)(255/c));	
+                final int BOTH_FIELDS = 1;
+                final int MIXED_CONC = 2;
+                final int CHECKER_BOARD = 3;
+                int version = 2;
+                
+                // Draw the antibiotic field
+                if ( version == BOTH_FIELDS ) {
+                    draw2D(antibioticA, Color.MAGENTA, (float)(255/c));	
+                    draw2D(antibioticB, Color.CYAN, (float)(255/c));
+                    //draw2D(antibioticA, Color.MAGENTA, (float)(255/c));	
+                }
+                else if ( version == MIXED_CONC ) {
+                	//drawMixedConc2D(antibioticA, antibioticB, Color.MAGENTA, Color.CYAN, (float)(255/c));	
+                }
+                else if ( version == CHECKER_BOARD ) {
+                	draw2DGrid(sim, antibioticA, antibioticB, Color.MAGENTA, Color.BLUE, (float)(255/c));
+                }
 				
 				// Draw sub-population A
 				for(CrossProtectionBacterium b : bacA) {
