@@ -673,7 +673,7 @@ public class BSimCrossProtection {
                     //draw2D(antibioticA, Color.MAGENTA, (float)(255/c));	
                 }
                 else if ( version == MIXED_CONC ) {
-                	//drawMixedConc2D(antibioticA, antibioticB, Color.MAGENTA, Color.CYAN, (float)(255/c));	
+                	drawMixedConc2D(antibioticA, antibioticB, Color.MAGENTA, Color.CYAN, (float)(255/c));	
                 }
                 else if ( version == CHECKER_BOARD ) {
                 	draw2DGrid(sim, antibioticA, antibioticB, Color.MAGENTA, Color.BLUE, (float)(255/c));
