@@ -37,13 +37,24 @@ public class BSim {
 	private BSimTicker ticker;
 	private BSimDrawer drawer;
 	private Vector<BSimExporter> exporters = new Vector<BSimExporter>();	
+	
+	/** Wall boundaries for x_pos, y_pos, z_pos, x_neg, y_neg, z_neg (true = closed, false = open). */
+	public boolean [] wall_boundaries = {true, true, true, true, true, true};
+	/** Sets the open and closed wall boundaries (+x, +y, +z, -x, -y, -z). */
+	public void setWallBoundaries( boolean x_pos, boolean y_pos, boolean z_pos, boolean x_neg, boolean y_neg, boolean z_neg ) {
+		wall_boundaries = new boolean[]{x_pos, y_pos, z_pos, x_neg, y_neg, z_neg};
+	}
+	/** Sets the open and closed wall boundaries (+x, +y, +z, -x, -y, -z). */
+	public void setWallBoundaries( boolean [] wall_boundaries ) {
+		this.wall_boundaries = wall_boundaries;
+	}
 
 	/** Set the timestep (secs). */
 	public void setDt(double d) { dt = d; }
 	/** Set the length of the simulation (secs). */
 	public void setSimulationTime(double d) { simulationTime = d; }
 	/** Set the time format. Used to display the time on movies. */
-	public void setTimeFormat(String s) { timeFormat = new DecimalFormat(s); }
+	public void setTimeFormat(String s) { timeFormat = new DecimalFormat(s); } 
 	/** Set the simulation bound (microns). */
 	public void setBound(double x, double y, double z) { bound = new Vector3d(x,y,z); }
 	/** Set whether the boundaries are solid (reflecting) or wrapping (periiodic). Solid = true, relecting = false. */
