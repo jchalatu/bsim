@@ -1,20 +1,12 @@
 package BSimCrossProtection;
 
-import bsim.BSim;
+import bsim.BSim; 
 
 import bsim.BSimChemicalField;
-import bsim.capsule.BSimCapsuleBacterium;
 import bsim.winter2021.Bacterium;
 import javax.vecmath.Vector3d;
 
-import com.beust.jcommander.Parameter;
-
-import java.awt.*;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.*;
-import java.util.List;
-import java.lang.Math;
 /**
  */
 public class CrossProtectionBacterium extends Bacterium {
@@ -29,19 +21,25 @@ public class CrossProtectionBacterium extends Bacterium {
 	final private double initial_growth_stdv = 0.05;
 	final private double initial_growth_rate;
 	
+	final private double shrink_stdv = 0.0434;			
+	final private double shrink_mean = -0.117;
+	
 	/** Scales the growth rate of the bacteria. */
-	final private double scale_1 = 1;
+	final private double scale_1 = 2;//1;
 	/** Scales the concentration for the growth rate of the bacteria. */
 	final private double scale_2 = 0.1;
 	
 	/** Threshold of antibiotics for bacterium growth to slow [Molecules/(micron)^3]. */
 	final private double growth_threshold;  
 	/** Threshold of antibiotics for bacterium to start dying [Molecules/(micron)^3]. */
-	final private double death_threshold;  
+	final private double conc_threshold;  
 	/** Flag for enzyme production. */
 	private boolean production;			
+	/** Flag to indicate toxin levels are above threshold. */
+	private boolean aboveConcThreshold;
 	/** Amount of enzymes produced to decay the antibiotic field. */
 	private double enzymeNum;
+
 	
     // Function you call when you want to make a new bacterium object
     public CrossProtectionBacterium(BSim sim, BSimChemicalField antibiotic, BSimChemicalField resistant, Vector3d px1, Vector3d px2){
@@ -55,8 +53,9 @@ public class CrossProtectionBacterium extends Bacterium {
         this.resistant_field = resistant;
         
         growth_threshold = 1e2;
-        death_threshold = 3e2;//4e2;	
+        conc_threshold = 3e2;//4e2;	
         production = true;
+        aboveConcThreshold = false;
         enzymeNum = 3e3;//2e3;//1e3;
         
     	Random bacRng = new Random(); 		// Random number generator
@@ -71,6 +70,26 @@ public class CrossProtectionBacterium extends Bacterium {
     public void action() { 						// Runs at every time step
         super.action();
         
+        // If toxin levels are above the threshold, the bacteria starts to die
+        if ( antibiotic_field.getConc(position) > getConcThreshold() ) {
+        	aboveConcThreshold = true;
+        	
+        	// Bacteria starts shrinking 
+        	Random bacRng = new Random();	
+	        //setK_growth( shrink_stdv * bacRng.nextGaussian() + shrink_mean );
+        	setK_growth(0.0);
+        }
+        	
+        else {
+        	aboveConcThreshold = false;
+        	
+            // Cell growth rate is lowered depending on antibiotic concentration (Arbitrary for now)
+            if ( antibiotic_field.getConc(position) > growth_threshold ) {
+            	setK_growth( initial_growth_rate * scale_1/(scale_1 + antibiotic_field.getConc(position) * scale_2 * sim.getDt()));
+            } 
+        }
+        
+        /*
         // Cell growth rate is lowered depending on antibiotic concentration
         if ( antibiotic_field.getConc(position) > growth_threshold 
         		&& antibiotic_field.getConc(position) <= getDeathThreshold() ) {		
@@ -79,14 +98,12 @@ public class CrossProtectionBacterium extends Bacterium {
         
         // Cell death
         else if ( antibiotic_field.getConc(position) > getDeathThreshold() ) {
-        	Random bacRng = new Random();
+        	aboveConcThreshold = true;
+        	//setProduction(false); 					// Cell stops producing enzymes when dying
         	
-		    double shrink_stdv = 0.0434;			
-		    double shrink_mean = -0.117;			
-		    
+        	Random bacRng = new Random();	
 	        setK_growth( shrink_stdv * bacRng.nextGaussian() + shrink_mean );
-	        setProduction(false); 					// Cell stops producing enzymes when dying
-        }
+        }*/
 		
 		// Production of enzymes to decay the antibiotic the bacteris is resistant to
 		if ( isProducing() ) {						// Steady production of enzymes (enzyme/hr)
@@ -96,19 +113,13 @@ public class CrossProtectionBacterium extends Bacterium {
     }
 	
     /** Returns the antibiotic threshold for a bacterium. */
-    public double getDeathThreshold() {
-        return this.death_threshold;
-    }
-    
+    public double getConcThreshold() { return this.conc_threshold; }
     /** Returns the flag for the internal enzyme production of a bacterium. */
-    public boolean isProducing() {
-        return this.production;
-    }
-    
+    public boolean isProducing() { return this.production; }
     /** Sets the flag for the internal enzyme production of a bacterium. */
-    public void setProduction( boolean production) {
-        this.production = production;
-    }
+    public void setProduction( boolean production) { this.production = production; }
+    /** Returns the flag that indicates toxin levels above threshold. */
+    public boolean isAboveThreshold() { return aboveConcThreshold; }
     
     // This function is called when the bacterium has passed its' division threshold and is ready to divide.
     public CrossProtectionBacterium divide() {
