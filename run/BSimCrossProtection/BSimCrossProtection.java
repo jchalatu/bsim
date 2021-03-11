@@ -1,7 +1,6 @@
 package BSimCrossProtection;
 
-import bsim.BSim;
-import bsim.BSimChemicalField;
+import bsim.BSim; 
 import bsim.BSimTicker;
 import bsim.BSimUtils;
 import bsim.capsule.BSimCapsuleBacterium;
@@ -42,32 +41,43 @@ import java.io.File;
 public class BSimCrossProtection {
 	
 	// Initial Conditions
+	/** Used to determine the toxin distribution for the simulation. */
+	private int sim_condition = 2;
+	
 	/** Toxins flow in from the left boundary. */
 	private static final int FLOW_IN = 1;
-	/** Simulation starts with an uniform distribution of toxin. */
+	
+	/** Simulation increases uniform distribution of toxin. */
 	private static final int UNIFORM = 2;
-	
-	/** Used to determine the toxin distribution for the simulation. */
-	private int sim_condition = 1;
-	
+	/** Steady state concentration level. */
+	private double initial_conc = 310;
+    /** How much toxin A increases per hour. */
+    private double toxin_increment_A = 50;
+    /** How much toxin B increases per hour. */
+    private double toxin_increment_B = 50;
+    /** Delay for toxin A. */
+    private int delayA = 0;
+    /** Delay for toxin B. */
+    private int delayB = 0;
+    /** Delay counter for toxin A. */
+    private int delayCountA = 0;
+    /** Delay counter for toxin B. */
+    private int delayCountB = 0;
+    
+    /** Flag to draw fields on two separate simulation screens. */
+    private static final boolean TWO_SCREENS = true;
+    /** Width of the simulation window. */
+    private final int window_width = TWO_SCREENS ? 1200 : 800;
+    /** Height of the simulation window. */
+    private final int window_height = 600;
+    
+    // For a single screen
+    final int MIXED_CONC = 1;
+    final int CHECKER_BOARD = 2;
+    int SINGLE_SCREEN = 2;
+    
     /** Whether to enable growth in the ticker etc. or not... */
     private static final boolean WITH_GROWTH = true;
-    
-    /** Flag to allow toxin drip. */
-    private static final boolean DRIP = false;
-    /** Delay between toxinA drips (hrs). */
-    private double drip_delayA = 4;
-    /** Counter for delay between toxinA drips. */
-    private double drip_countA = 0;	
-    /** Delay between toxinA drips (hrs). */
-    private double drip_delayB = 4;
-    /** Counter for delay between toxinB drips. */
-    private double drip_countB = 0;
-    /** Quantity of toxinA for each drip. */
-    private double drip_quantityA = 4e4;
-    /** Quantity of toxinB for each drip. */
-    private double drip_quantityB = 4e4;
-    
     
     // Boundaries
     // Boolean flag: specifies whether any walls are needed
@@ -85,10 +95,6 @@ public class BSimCrossProtection {
     // Simulation setup parameters. Set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
     public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {75.0, 50.0, 1.0} ));
-    // 75.0, 50.0, 1.0
-    // 100.0, 50.0, 1.0
-    // 125.0, 75.0, 1.0		
-    // 198.0, 159.0, 1.0	// Use for onecell.csv
 
     // Grid ->
     // 52x42 -> 546
@@ -99,7 +105,7 @@ public class BSimCrossProtection {
     // Density (cell number)
     // optional call to a default initial set of cells
     @Parameter(names = "-pop", arity = 1, description = "Initial seed population (n_total).")
-    public int initialPopulation = 2;
+    public int initialPopulation = 1;
 
     // A:R ratio
     // for default set of cells, set ratio of two subpopulations
@@ -158,28 +164,18 @@ public class BSimCrossProtection {
     }
     
     /** Creates a new Bacterium object. */
-    public static CrossProtectionBacterium createBacterium(BSim sim, BSimChemicalField antibiotic, BSimChemicalField resistant) {
+    public static CrossProtectionBacterium createBacterium(BSim sim, ChemicalField antibiotic, ChemicalField resistant) {
     	Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
         
-        // A larger range for initial positions
-        /*Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x, 
-				Math.random()*sim.getBound().y, 
-				Math.random()*sim.getBound().z);
-        
-        // Changed position to random (?) for now
-        Vector3d pos2 = new Vector3d(Math.random()*sim.getBound().x, 
-				Math.random()*sim.getBound().y, 
-				Math.random()*sim.getBound().z);*/
-        
         // Initiates bacteria closer together
         Vector3d pos1 = new Vector3d(30 + Math.random()*sim.getBound().x/4, 
-				15 + Math.random()*sim.getBound().y/3, 
+				15 + Math.random()*sim.getBound().y/4, 
 				Math.random()*sim.getBound().z);
         
         // Changed position to random (?) for now
         Vector3d pos2 = new Vector3d(30 + Math.random()*sim.getBound().x/4, 
-				15 + Math.random()*sim.getBound().y/3, 
+				15 + Math.random()*sim.getBound().y/4, 
 				Math.random()*sim.getBound().z);
         
         // Creates a new bacterium object whose endpoints correspond to the above data
@@ -191,7 +187,7 @@ public class BSimCrossProtection {
         // Earlier they were all initiatlied to length 1.
         Vector3d dispx1x2 = new Vector3d();
         dispx1x2.sub(pos2, pos1); 						// Sub is subtract
-        double length = dispx1x2.length(); 			// Determined.
+        double length = dispx1x2.length(); 				// Determined.
         
         if (length < bacterium.L_max) {
             bacterium.initialise(length, pos1, pos2); 	// Redundant to record length, but ok.
@@ -255,19 +251,6 @@ public class BSimCrossProtection {
         bacteriaAll.removeAll(bac_dead);
         bac_dead.clear();
     }
-    
-    /** Adds toxin to a random position within the boundary of the environment. */
-    public void dripToxin( BSim sim, BSimChemicalField field, double quantity ) {
-    	Random bacRng = new Random(); 		// Random number generator
-        bacRng.setSeed(50); 				// Initializes random number generator
-        
-        // Determine a random position to add toxin
-        Vector3d pos = new Vector3d(Math.random()*sim.getBound().x, 
-				Math.random()*sim.getBound().y, 
-				Math.random()*sim.getBound().z);
-        
-        field.addQuantity(pos, quantity);
-    }
 
     // This function does a lot. let's break it down
     // 1. Initializes simulation (how long it runs, etc)
@@ -294,7 +277,7 @@ public class BSimCrossProtection {
         final BSim sim = new BSim();
         sim.setDt(0.05);				    // Set simulation timestep in time units (0.01)
         									// Let the time units be in hours
-        sim.setSimulationTime(100);       	// Specified in time units, could also specify a termination condition elsewhere
+        sim.setSimulationTime(35);       	// Specified in time units, could also specify a termination condition elsewhere (used to be 100)
         sim.setTimeFormat("0.00");		    // Time Format for display on images
         sim.setBound(simX, simY, simZ);		// Simulation domain Boundaries
 
@@ -305,43 +288,30 @@ public class BSimCrossProtection {
 		/*********************************************************
 		 * Set up the antibiotic field
 		 */
-		final double c = 4.3e2;//4.5e2;       		// Molecules; Decrease this to see lower concentration
+		final double c = 375;			       		// Molecules; Decrease this to see lower concentration
 		final double decayRate = 0.0;				// Decay rate of antibiotics
 		final double diffusivity = 7.0;				// (Microns)^2/sec
 		
 		final int field_box_num = 50;				// Number of boxes to represent the chemical field
-		final BSimChemicalField antibioticA = new BSimChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
-		final BSimChemicalField antibioticB = new BSimChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
+		final ChemicalField antibioticA = new ChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
+		final ChemicalField antibioticB = new ChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
 		
-		/*********************************************************
-		Initial conditions:
-		 	1) Initial antibiotic distribution in the environment
-			2) Flow antibiotic from boundary (constant or time-varying)
-		 */
-		double initial_conc = 3e2;//4e2;
-		
-		// Case 1: Antibiotics are initially present throughout the entire domain at a fixed concentration
 		if ( sim_condition == UNIFORM ) {
-			
+			fixedBounds = false;
 			antibioticA.linearGradient(0, initial_conc, initial_conc);
 			antibioticB.linearGradient(0, initial_conc, initial_conc);
-			
-	        // Leaky -> bacteria can escape from sides of six faces of the box. 
-			// Only usable if fixedbounds allows it
-			// Set a closed or open boundary for antibiotic diffusion
-			if ( fixedBounds ) {
-				sim.setLeaky(false, false, false, false, false, false);
-				sim.setLeakyRate(0, 0, 0, 0, 0, 0);
-			}
-			else {
-				sim.setLeaky(true, true, true, true, false, false);
-				sim.setLeakyRate(1, 1, 1, 1, 0, 0);
-			}
+		}
+		
+        // Leaky -> bacteria can escape from sides of six faces of the box. 
+		// Only usable if fixedbounds allows it
+		// Set a closed or open boundary for antibiotic diffusion
+		if ( fixedBounds ) {
+			sim.setLeaky(false, false, false, false, false, false);
+			sim.setLeakyRate(0, 0, 0, 0, 0, 0);
 		}
 		else {
-			//sim.setLeaky(false, true, false, false, false, false);
-			sim.setLeaky(true, true, false, false, false, false);
-			sim.setLeakyRate(1, 1, 0, 0, 0, 0);
+			sim.setLeaky(true, true, true, true, false, false);
+			sim.setLeakyRate(1, 1, 1, 1, 0, 0);
 		}
 
         /*********************************************************
@@ -350,13 +320,10 @@ public class BSimCrossProtection {
        
         Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
-
-        /** Empty list which will later contain the endpoint of rectangle positions 4 = x1,y1,x2,y2. */
-        double[][] initEndpoints = new double[4][];
-
+        
         // Gets the location of the file that is currently running
         // Specify output file path
-        String systemPath = new File("").getAbsolutePath()+"\\SingleCellSims";
+        String systemPath = new File("").getAbsolutePath()+"\\CrossProtection";
 
 		// Create two sub-populations of bacteria objects randomly in space
         // Creates a new bacterium object whose endpoints correspond to the above data
@@ -457,25 +424,26 @@ public class BSimCrossProtection {
                 	}
                 }
                 
-                // State enable to allow toxins to drip into environment
-                if ( DRIP ) {
-                	
-                	// Create a delay between adding quantities of toxin
-                	if ( drip_countA >= drip_delayA ) {
-                		dripToxin( sim, antibioticA, drip_quantityA );
-                		drip_countA = 0;
+                // Uniformly increase the toxin concentration in the simulation
+                if ( sim_condition == UNIFORM ) {
+                	if ( delayCountA == delayA ) {
+                		//antibioticA.fill(0, toxin_increment_A * sim.getDt(), toxin_increment_A * sim.getDt());
+                		antibioticA.fillArea(toxin_increment_A, initial_conc);
+                		delayCountA = 0;
                 	}
                 	else {
-                		drip_countA += sim.getDt();
+                		delayCountA ++;
                 	}
                 	
-                	if ( drip_countB >= drip_delayB ) {
-                		dripToxin( sim, antibioticB, drip_quantityB );
-                		drip_countB = 0;
+                	if ( delayCountB == delayB ) {
+                		//antibioticB.fill(0, toxin_increment_B * sim.getDt(), toxin_increment_B * sim.getDt());
+                		antibioticB.fillArea(toxin_increment_A, initial_conc);
+                		delayCountB = 0;
                 	}
                 	else {
-                		drip_countB += sim.getDt();
+                		delayCountB ++;
                 	}
+        			
                 }
 
                 // Update the antibiotic field
@@ -540,7 +508,7 @@ public class BSimCrossProtection {
         /*********************************************************
          * Set up the drawer
          */
-        BSimDrawer drawer = new P3DDrawer(sim, 800, 600) {	//2752, 2208
+        BSimDrawer drawer = new P3DDrawer(sim, window_width, window_height) {	//2752, 2208
             /**
              * Draw the default cuboid boundary of the simulation as a partially transparent box
              * with a wireframe outline surrounding it.
@@ -554,6 +522,18 @@ public class BSimCrossProtection {
                 p3d.box((float)bound.x, (float)bound.y, (float)bound.z);
                 p3d.popMatrix();
                 p3d.noStroke();
+            }
+            
+            /** Draws a colored box to screen. */
+            public void legend( Color color, String title, int [] boxParams, int textX, int textY ) {
+            	// Box
+            	p3d.fill( color.getRed(), color.getGreen(), color.getBlue() );
+            	p3d.stroke(128, 128, 255);
+            	p3d.rect(boxParams[0], boxParams[1], boxParams[2], boxParams[3]);
+            	
+            	// Text
+            	p3d.fill(50);
+            	p3d.text(title, textX, textY);
             }
 
             @Override
@@ -576,11 +556,48 @@ public class BSimCrossProtection {
                 p3d.sphereDetail(10);
                 p3d.noStroke();
                 p3d.background(255, 255,255);
+                
+                // Draw two simulation boxes
+                if ( TWO_SCREENS ) {
+                	
+                	// Apply light settings
+                    lights(p3d);
+                	
+                    // Draw simulation with first field
+                    p3d.pushMatrix();
+                    p3d.translate((float) -40, 0, 0);
+                    scene(p3d, antibioticA, Color.MAGENTA);
+                    boundaries();
+                    time();
+                    p3d.popMatrix();
+                    
+                    // Draw simulation with second field
+                    p3d.pushMatrix();
+                    p3d.translate((float) 40, 0, 0);
+                    scene(p3d, antibioticB, Color.BLUE);
+                    boundaries();
+                    time();
+                    p3d.popMatrix();
 
-                scene(p3d);
-                boundaries();
-                //reference();
-                time();
+                    // Draw reference
+                    drawSingleFieldRef(-40, 55, 720, 3, Color.MAGENTA, Color.WHITE);
+                    drawLabel(60, window_height - 50, initial_conc, 0);
+                    drawSingleFieldRef(40, 55, 720, 3, Color.BLUE.brighter(), Color.WHITE);
+                    drawLabel(615, window_height - 50, initial_conc, 0);
+                    
+                }
+                // Draw only one simulation box
+                else {
+                    scene(p3d);
+                    boundaries();
+                    if ( SINGLE_SCREEN == MIXED_CONC )
+                    	concDifferenceRef(-15, 0, 3, 525/*2.5f*/, 100, 50, "Field A", "Field B");
+                    else if ( SINGLE_SCREEN == CHECKER_BOARD ) {
+                    	legend( Color.MAGENTA, "Toxin A", new int [] {-17, 0, 3, 3}, 57, 145 );
+                    	legend( Color.BLUE, "Toxin B", new int [] {-17, 6, 3, 3}, 57, 190 );
+                    }
+                    time();
+                }
 
                 p3d.endDraw();
                 g.drawImage(p3d.image, 0,0, null);
@@ -595,40 +612,55 @@ public class BSimCrossProtection {
                 //p3d.text(sim.getFormattedTimeHours(), 50, 50);
                 p3d.text(sim.getFormattedTime(), 50, 50);
             }
+            
+            /** Applies light settings to scene. */
+            public void lights( PGraphics3D p3d ) {
+                p3d.ambientLight(128, 128, 128);
+                p3d.directionalLight(128, 128, 128, 1, 1, -1);
+                //p3d.lightFalloff(1, 1, 0);
+            }
+            
+            /** Draws chemical fields in separate boxes. */
+            public void scene(PGraphics3D p3d, ChemicalField field, Color field_color) {
+
+                // Draw the antibiotic field
+                draw2D(field, field_color, (float)(255/c));
+                
+                // Draw sub-population A
+                for ( int i = 0; i < bacA.size(); i ++ ) {
+                	draw(bacA.get(i), bacA.get(i).isAboveThreshold() ? Color.RED : Color.GREEN);
+                }
+                
+                // Draw sub-population B
+                for ( int i = 0; i < bacB.size(); i ++ ) {
+                	draw(bacB.get(i), bacB.get(i).isAboveThreshold() ? Color.RED : Color.ORANGE);
+                }
+
+            }
 
             @Override
             public void scene(PGraphics3D p3d) {
                 p3d.ambientLight(128, 128, 128);
                 p3d.directionalLight(128, 128, 128, 1, 1, -1);
                 
-                final int BOTH_FIELDS = 1;
-                final int MIXED_CONC = 2;
-                final int CHECKER_BOARD = 3;
-                int version = 2;
-                
                 // Draw the antibiotic field
-                if ( version == BOTH_FIELDS ) {
-                    draw2D(antibioticA, Color.MAGENTA, (float)(255/c));	
-                    draw2D(antibioticB, Color.CYAN, (float)(255/c));
-                    //draw2D(antibioticA, Color.MAGENTA, (float)(255/c));	
+                if ( SINGLE_SCREEN == MIXED_CONC ) {
+                	int max_conc_difference = 100;
+                	drawConcDifference2D(antibioticA, antibioticB, (float)(255/c), max_conc_difference);	
                 }
-                else if ( version == MIXED_CONC ) {
-                	drawMixedConc2D(antibioticA, antibioticB, Color.MAGENTA, Color.CYAN, (float)(255/c));	
-                }
-                else if ( version == CHECKER_BOARD ) {
+                else if ( SINGLE_SCREEN == CHECKER_BOARD ) {
                 	draw2DGrid(sim, antibioticA, antibioticB, Color.MAGENTA, Color.BLUE, (float)(255/c));
                 }
 				
-				// Draw sub-population A
-				for(CrossProtectionBacterium b : bacA) {
-					draw(b, b.isProducing() ? Color.GREEN : Color.RED);
-				}	
-				
-				// Draw sub-population B
-				for(CrossProtectionBacterium b : bacB) {
-					draw(b, b.isProducing() ? Color.ORANGE : Color.RED);
-				}	
-
+                // Draw sub-population A
+                for ( int i = 0; i < bacA.size(); i ++ ) {
+                	draw(bacA.get(i), bacA.get(i).isAboveThreshold() ? Color.RED : Color.GREEN);
+                }
+                
+                // Draw sub-population B 
+                for ( int i = 0; i < bacB.size(); i ++ ) {
+                	draw(bacB.get(i), bacB.get(i).isAboveThreshold() ? Color.RED : Color.ORANGE);
+                }
             }
         };
         sim.setDrawer(drawer);
@@ -647,7 +679,8 @@ public class BSimCrossProtection {
 
             String filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
 //            String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
-
+            
+            double export_time = 1.0;
             /*********************************************************
              * Various properties of the simulation, for future reference.
              */
@@ -673,7 +706,7 @@ public class BSimCrossProtection {
 
                 }
             };
-            metaLogger.setDt(10);//3600);			// Set export time step
+            metaLogger.setDt(export_time);	// Set export time step (used to be 10, simulation time used to be 100)
             sim.addExporter(metaLogger);
 
             BSimLogger posLogger = new BSimLogger(sim, filePath + "position.csv") {
@@ -710,7 +743,7 @@ public class BSimCrossProtection {
 
                 }
             };
-            posLogger.setDt(10);			// set export time step for csv file
+            posLogger.setDt(export_time);			// set export time step for csv file
             sim.addExporter(posLogger);
 
 
@@ -747,14 +780,14 @@ public class BSimCrossProtection {
                     write(buffer);
                 }
             };
-            sumLogger.setDt(10);			// Set export time step
+            sumLogger.setDt(export_time);			// Set export time step
             sim.addExporter(sumLogger);
 
             /**
              * Export a rendered image file
              */
             BSimPngExporter imageExporter = new BSimPngExporter(sim, drawer, filePath );
-            imageExporter.setDt(10); //this is how often it will output a frame
+            imageExporter.setDt(export_time); //this is how often it will output a frame
             // separate time-resolution for images vs excel file
             sim.addExporter(imageExporter);
 
