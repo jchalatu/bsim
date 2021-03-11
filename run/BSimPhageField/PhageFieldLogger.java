@@ -1,4 +1,4 @@
-package BSimPhageLogger;
+package BSimPhageField;
 
 import java.io.IOException;
 import java.util.ArrayList;
