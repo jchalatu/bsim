@@ -276,9 +276,9 @@ public class BSimCrossFeeding {
 		/*********************************************************
 		 * Set up the antibiotic field
 		 */
-		final double c = 7e2;//1e3;        				// Molecules; Decrease this to see lower concentration
+		final double c = 7e2;        				// Molecules; Decrease this to see lower concentration
 		final double decayRate = 0.0;				// Decay rate of antibiotics
-		final double diffusivity = 3.0;//7.0;//15.0;		// (Microns)^2/sec
+		final double diffusivity = 2.0;				// (Microns)^2/sec
 		
 		final int field_box_num = 50;				// Number of boxes to represent the chemical field
 		final BSimChemicalField amino_acid_A = new BSimChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
@@ -292,12 +292,12 @@ public class BSimCrossFeeding {
         Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
 
-        /** Empty list which will later contain the endpoint of rectangle positions 4 = x1,y1,x2,y2. */
-        double[][] initEndpoints = new double[4][];
-
         // Gets the location of the file that is currently running
         // Specify output file path
         String systemPath = new File("").getAbsolutePath()+"\\SingleCellSims";
+        
+        /** Empty list which will later contain the endpoint of rectangle positions 4 = x1,y1,x2,y2. */
+        /*double[][] initEndpoints = new double[4][];
 
         // Creates a new csvreader object which can extract data from .csv files
         BufferedReader csvReader = null;
@@ -337,7 +337,7 @@ public class BSimCrossFeeding {
             e.printStackTrace(); 			// If there is an error, this will just print out the message
         }
         
-        /*
+        
         // Now that the data is extracted, we can create the bacterium objects
        for(int j = 0; j < initEndpoints[0].length; j++){
         	
