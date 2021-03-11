@@ -25,25 +25,31 @@ public class CrossFeedingBacterium extends Bacterium {
 	protected BSimChemicalField consumption_field;
 	
 	/** Initial growth rate of the bacteria. */
-	final private double initial_growth_mean = 0.01;
+	final private double initial_growth_mean = 0.01;	
 	final private double initial_growth_stdv = 0.001;
 	final private double initial_growth_rate;
 	
-	/** Flag for amino acid production. */
+	/** Flag for amino acid production (/hr). */
 	private boolean production;			
-	/** Amount of amino acid produced. */
+	/** Amount of amino acid produced (/hr). */
 	private double productionNum;
 	
-	/** Amount of amino acid consumed. */
+	/** Amount of amino acid consumed (/hr). */
 	private double consumptionRate;
+	/** Max amount of amino acid consumed by a bacterium (/hr). */
+	private double consumptionMax;
 	
 	// Constants for Monod Equation
 	
     /** Maximum growth rate of the cell (um/hr). */
-    final private double mu_max = 0.8;//1.3;
+    final private double mu_max = 1.3;
     /** The "half-velocity constant"; the value of [S] when mu/mu_max = 0.5 (g/dm^3). */
-    final private double K_s = 22;//2.2;//e-5;
-	
+    final private double K_s = 2.2e-1;//2.2e-5;
+    
+    // Constants for yield conversion
+    final double yield_coefficient = 1.0;			// Arbitrary value between 0 and 1
+    double total_bio_mass = 1.0;			
+    
     /** Function you call when you want to make a new bacterium object. */
     public CrossFeedingBacterium(BSim sim, BSimChemicalField production_field, BSimChemicalField consumption_field, Vector3d px1, Vector3d px2){
     	
@@ -56,8 +62,9 @@ public class CrossFeedingBacterium extends Bacterium {
         this.consumption_field = consumption_field;
         
         production = true;
-        productionNum = 2e3;
-        consumptionRate = 0.3;
+        productionNum = 1e3;
+        consumptionRate = 1.0;//0.8;
+        consumptionMax = 1e3;
         
     	Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
@@ -72,14 +79,29 @@ public class CrossFeedingBacterium extends Bacterium {
         super.action();
         
         // Consumption field decays as it is consumed
-        // TODO: Yield conversion 
         if ( consumption_field.getConc(position) > 0 ) {
-        	double consumptionNum = consumption_field.getConc(position) * consumptionRate;
-        	consumption_field.addQuantity(position, -consumptionNum * sim.getDt() );
+        	double consumptionNum = consumption_field.getConc(position) * consumptionRate * sim.getDt();
+        	
+        	// The maximum amount of amino acids able to be consumed by a bacterium
+        	if ( consumptionNum > consumptionMax ) {
+        		consumption_field.addQuantity( position, -consumptionMax );
+        	}
+        	else {
+        		consumption_field.addQuantity( position, -consumptionNum );
+        	}
         	
     		// Cell growth rate is dependent on consumption 
-            double growth_rate = mu_max * ( consumptionNum / ( K_s + consumptionNum) );
+            double growth = (mu_max * sim.getDt()) * ( consumptionNum / ( K_s + consumptionNum ) );
+        	//double growth = (mu_max) * ( consumptionNum / ( K_s + consumptionNum ) );
+            
+            total_bio_mass += growth;
+            
+            // Yield conversion
+            double growth_rate = (growth * total_bio_mass) / yield_coefficient;
             setK_growth(growth_rate);
+            
+            //System.out.println(total_bio_mass);
+            System.out.println(consumptionNum + " " + growth_rate);
         }
 		
 		// Production of amino acid is dependent on nutrient field ( in access )
