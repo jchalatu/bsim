@@ -19,7 +19,7 @@ public class PhageFieldLogger extends BSimLogger {
     public void before() {
         super.before();
         String InfectionFields = "ImageNumber,ObjectNumber,SimulationTime,Population,InitialLength,"
-        		+ "Length,TotalGrowth,InfStatus\n";
+        		+ "Length,Location_Center_X,Location_Center_Y,AreaShape_Orientation,AreaShape_Radius\n";
         write(InfectionFields);
     }
 
@@ -33,8 +33,10 @@ public class PhageFieldLogger extends BSimLogger {
             		bac.size() + "," +
             		(b.L_initial * BSimPhageField.pixel_to_um_ratio) + "," +
             		(b.L * BSimPhageField.pixel_to_um_ratio) + "," +
-            		((b.L - b.L_initial) * BSimPhageField.pixel_to_um_ratio) + "," +
-            		b.isInfected() + 
+            		(b.position.x * BSimPhageField.pixel_to_um_ratio) + "," +
+            		(b.position.y * BSimPhageField.pixel_to_um_ratio) + "," +
+            		b.cell_profiler_angle() + "," +
+            		(b.radius * BSimPhageField.pixel_to_um_ratio) +
                     "\n";
         }
         write(buffer);
