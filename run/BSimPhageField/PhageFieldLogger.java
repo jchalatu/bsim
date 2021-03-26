@@ -1,6 +1,6 @@
 package BSimPhageField;
 
-import java.io.IOException;
+import java.io.IOException; 
 import java.util.ArrayList;
 
 import bsim.BSim;
@@ -14,12 +14,13 @@ public class PhageFieldLogger extends BSimLogger {
 		super(sim, filename);
 		this.bac = bac;
 	}
-	
+    
     @Override
     public void before() {
         super.before();
-        String InfectionFields = "ImageNumber,ObjectNumber,SimulationTime,Population,InitialLength,"
-        		+ "Length,Location_Center_X,Location_Center_Y,AreaShape_Orientation,AreaShape_Radius\n";
+        String InfectionFields = "ImageNumber,ObjectNumber,SimulationTime,Population,"
+        		+ "AreaShape_MajorAxisLength,AreaShape_MinorAxisLength,AreaShape_Center_X,AreaShape_Center_Y,"
+        		+ "AreaShape_Orientation\n";
         write(InfectionFields);
     }
 
@@ -31,12 +32,11 @@ public class PhageFieldLogger extends BSimLogger {
                     (b.id + 1) + "," + 
             		(sim.getTimestep() * sim.getDt()) + "," +
             		bac.size() + "," +
-            		(b.L_initial * BSimPhageField.pixel_to_um_ratio) + "," +
-            		(b.L * BSimPhageField.pixel_to_um_ratio) + "," +
+            		((b.L + 2 * b.radius) * BSimPhageField.pixel_to_um_ratio) + "," +
+            		(2 * b.radius) * BSimPhageField.pixel_to_um_ratio + "," +
             		(b.position.x * BSimPhageField.pixel_to_um_ratio) + "," +
             		(b.position.y * BSimPhageField.pixel_to_um_ratio) + "," +
             		b.cell_profiler_angle() + "," +
-            		(b.radius * BSimPhageField.pixel_to_um_ratio) +
                     "\n";
         }
         write(buffer);
@@ -52,3 +52,4 @@ public class PhageFieldLogger extends BSimLogger {
     }
 	
 }
+
