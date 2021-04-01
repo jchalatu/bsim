@@ -9,6 +9,7 @@ import bsim.capsule.RelaxationMoverGrid;
 import bsim.draw.BSimDrawer;
 import bsim.draw.BSimP3DDrawer;
 import bsim.export.BSimLogger;
+import bsim.export.BSimMovExporter;
 import bsim.export.BSimPngExporter;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -29,8 +30,8 @@ public class NeighbourInteractions {
 
     // Sohaib Nadeem
     static final double pixel_to_um_ratio = 13.89;
-    final int width_pixels = 700;
-    final int height_pixels = 250;
+    final int width_pixels = 400;
+    final int height_pixels = 400;
     final double width_um = width_pixels / pixel_to_um_ratio; // should be kept as constants for cell prof.
     final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
 
@@ -146,7 +147,7 @@ public class NeighbourInteractions {
         // create the simulation object
         final BSim sim = new BSim();
         sim.setDt(0.05);				    // set Simulation Timestep in time units
-        sim.setSimulationTime(3.0);       // specified in time units, could also specify a termination condition elsewhere
+        sim.setSimulationTime(2.50/*5.0*/);       // specified in time units, could also specify a termination condition elsewhere
         sim.setTimeFormat("0.00");		    // Time Format for display on images
         sim.setBound(simX, simY, simZ);		// Simulation domain Boundaries
 
@@ -183,52 +184,13 @@ public class NeighbourInteractions {
         //specify output file path
         String systemPath = new File("").getAbsolutePath()+"\\SingleCellSims";
 
-        BufferedReader csvReader = null;
-        try {
-            // try reading the initial position file
-            csvReader = new BufferedReader(new FileReader("C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\MyExpt_EditedObjects8.csv"));
-        } catch (FileNotFoundException e) {
-            // if that doesn't work, print out an error
-            e.printStackTrace();
-        }
-        try {
-            String row = csvReader.readLine();
-            // check if fields match those of the required csv file from CellProfiler
-            while( (row = csvReader.readLine()) != null ) {
-                double cell_info[] = Arrays.stream(row.split(",")).mapToDouble(Double::parseDouble).toArray();
-
-                if ( (int) cell_info[0] == 1 ) {
-                    double cell_length = ( cell_info[16] - cell_info[22] ) / pixel_to_um_ratio;
-                    double cell_orientation = -1 * (cell_info[23] + (Math.PI / 2));
-                    double cell_center_x = cell_info[8] / pixel_to_um_ratio;
-                    double cell_center_y = cell_info[9] / pixel_to_um_ratio;
-
-                    double axis_x = cell_length * Math.cos(cell_orientation); // use trig. identity to simplify?
-                    double axis_y = cell_length * Math.sin(cell_orientation); // use trig. identity to simplify?
-
-                    Vector3d x1 = new Vector3d(cell_center_x + (axis_x / 2), cell_center_y + (axis_y / 2), 0.5/*bacRng.nextDouble()*0.1*(simZ - 0.1)/2.0*/);
-                    Vector3d x2 = new Vector3d(cell_center_x - (axis_x / 2), cell_center_y - (axis_y / 2), 0.5/*bacRng.nextDouble()*0.1*(simZ - 0.1)/2.0*/);
-
-                    Bacterium bac0 = createBacterium(sim, x1, x2);
-                    // adds the newly created bacterium to our lists for tracking purposes
-                    bac.add(bac0); //for separate subpopulations
-                    bacteriaAll.add(bac0);  // for all cells
-                }
-                else {
-                    break;
-                }
-            }
-        } catch(IOException e) {
-            e.printStackTrace(); // if there is an error, this will just print out the message
-        }
-
-        /*
+        /////////
         // creates a new csvreader object which can extract data from .csv files
         // Catue added this, to read a CSV file, which specified endpoints of each cell, one per row
         BufferedReader csvReader = null;
         try {
             // try reading the initial position file
-            csvReader = new BufferedReader(new FileReader("C:\\Users\\sohai\\OneDrive\\Desktop\\Work\\bsim-master - Winter2021\\examples\\PhysModBsim\\onecell.csv"));
+            csvReader = new BufferedReader(new FileReader("C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\onecell-400by400.csv"));
         } catch (FileNotFoundException e) {
             // if that doesn't work, print out an error
             e.printStackTrace();
@@ -270,7 +232,7 @@ public class NeighbourInteractions {
             bac.add(bac0); //for separate subpopulations
             bacteriaAll.add(bac0);  // for all cells
         }
-         */
+         ////////
 
         // Set up stuff for growth. Placeholders for the recently born and dead
         final ArrayList<Bacterium> bac_born = new ArrayList();
@@ -338,7 +300,7 @@ public class NeighbourInteractions {
                     bacteriaAll.addAll(bac_born); //adds all the newborn daughters
                     // just added - Sohaib Nadeem
                     for(Bacterium b : bac_born) {
-                        // assigns a growth rate and a division length to each bacterium according to a normal distribution
+                        // assigns a growth rate and a division length to each new bacterium according to a normal distribution
                         double growthRate=growth_stdv*bacRng.nextGaussian() + growth_mean;
                         b.setK_growth(growthRate);
 
@@ -470,8 +432,13 @@ public class NeighbourInteractions {
 //                draw(bac_act, new Color(55, 126, 184));
 //                draw(bac_rep, new Color(228, 26, 28));
 
+                /*
                 for(Bacterium b : bac) {
                     draw(b, Color.blue);
+                }
+                 */
+                for(int i = 0; i < bac.size(); i++) {
+                    draw(bac.get(i), Color.blue);
                 }
 
             }
@@ -607,15 +574,22 @@ public class NeighbourInteractions {
              * Export a rendered image file
              */
             BSimPngExporter imageExporter = new BSimPngExporter(sim, drawer, filePath );
-            imageExporter.setDt(0.05); //this is how often it will output a frame
+            imageExporter.setDt(export_time); //this is how often it will output a frame
             // separate time-resolution for images vs excel file
             sim.addExporter(imageExporter);
 
 
             // Export a csv file that matches CellProfiler's output
             CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv", bacteriaAll);
-            cp_logger.setDt(export_time);			// Set export time step
+            cp_logger.setDt(0.5);			// Set export time step
             sim.addExporter(cp_logger);
+
+            //Export a video of the simulation
+            BSimMovExporter videoExporter = new BSimMovExporter(sim, drawer, filePath + "video.mp4" );
+            videoExporter.setSpeed(1); // the number of simulation time units played in one second
+            videoExporter.setDt(0.05); // this is how often (in simulation time) it will output a frame for the video
+            sim.addExporter(videoExporter);
+
 
             sim.export();
 

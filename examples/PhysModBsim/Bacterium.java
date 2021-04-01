@@ -52,7 +52,8 @@ public class Bacterium extends BSimCapsuleBacterium {
 
     // this function is called when the bacterium has passed its' division threshold and is ready to divide.
     public Bacterium divide() {
-        Vector3d randomVec = new Vector3d(rng.nextDouble()/100,rng.nextDouble()/100,rng.nextDouble()/100);
+        Vector3d randomVec = new Vector3d(rng.nextDouble(), rng.nextDouble(), rng.nextDouble());
+        randomVec.scale(0.1); // 0.01
         System.out.println("Bacterium " + this.id + " is dividing...");
 
         Vector3d u = new Vector3d();
