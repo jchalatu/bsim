@@ -2,8 +2,12 @@ package bsim.capsule;
 
 import bsim.BSim;
 import bsim.ode.BSimOdeSystem;
+import bsim.winter2021.RectangleIntersection;
 
+import javax.vecmath.Vector2d;
 import javax.vecmath.Vector3d;
+import java.awt.*;
+import java.awt.geom.Rectangle2D;
 import java.util.Random;
 import java.util.Timer;
 import java.util.Vector;
@@ -100,17 +104,21 @@ public class BSimCapsuleBacterium {
 
     // Spring constants
     public double k_int = 50.0;     		// internal force (5e-5 from Storck)
-    public double k_wall = 50.0;   			// overlap with wall
-    public double k_cell = 50.0;   			// overlapping cells (1e-4 from Storck)
+    public double k_wall = 50.0 * 10;   			// overlap with wall
+    public double k_cell = 50.0 * 10;   			// overlapping cells (1e-4 from Storck)
     public double k_filial = 5e-7;			// end to end attraction
     public double k_longfilial = 5e-7;		// opposite end repulsion when filial is active
-    public double k_sticking = 10.0;   		// side to side attraction
+    public double k_sticking = 0.01/*10.0*/;   		// side to side attraction
     public double k_wallstick = 0.00;  		// cell to wall attraction (0 right now since walls are leaky)
 
     // endpoint-to-endpoint ranges within which which these forces act, or (endpoint-to-wall distance)
     public double range_filial = 0.01; 		// maximum range at which filial forces activate
-    public double range_sticking = 0.6; 	// max range ... sticking forces
+    public double range_sticking = 5.0/*0.6, 2.0*/; 	// max range ... sticking forces
     public double range_wallstick = 0.25; 	// max range ... attractive wall forces
+
+    // contact range extension (pilus length) and contact threshold for sticking force (side to side attraction)
+    public double contact_range_extension = 0.25;
+    public double contact_threshold = 4.0;
     
     private double EPS = 1e-12; // machine precision value for use in checking whether quantity is zero
     // You can use it like this: value x is effectively zero if Math.abs(x)<EPS
@@ -352,10 +360,142 @@ public class BSimCapsuleBacterium {
         // no forces on the z-axis?
     }
 
+    private double getNeighbourDist(BSimCapsuleBacterium neighbour_bac) {
+        double neighbourDist;
+
+        Vector3d u = new Vector3d(); 					// define u as a vector
+        u.sub(this.x2, this.x1); 						// u = x2 - x1 = vector pointing from one endpoint to the other
+        Vector3d v = new Vector3d(); 					// define v as a vector
+        v.sub(neighbour_bac.x2, neighbour_bac.x1); 		// v = x2 - x1 (neighbour cell)
+        Vector3d w = new Vector3d(); 					// define w as a vector
+        w.sub(this.x1, neighbour_bac.x1); 				// difference between the two x1 points
+
+        double a = u.dot(u);         // always >= 0
+        double b = u.dot(v);
+        double c = v.dot(v);         // always >= 0
+        double d = u.dot(w);
+        double e = v.dot(w);
+        double D = a * c - b * b; 	// figure out what D is by visualizing what it is     // always >= 0
+        double sc = D;
+        double sN = D;
+        double sD = D;       		// sc = sN / sD, default sD = D >= 0
+        double tc = D;
+        double tN = D;
+        double tD = D;       		// tc = tN / tD, default tD = D >= 0
+
+        // compute the line parameters of the two closest points
+        if (D < EPS) { 				// the lines are almost parallel
+            sN = 0.0;         		// force using point P0 on segment S1
+            sD = 1.0;         		// to prevent possible division by 0.0 later
+            tN = e;
+            tD = c;
+        } else {                 	// get the closest points on the infinite lines
+            sN = (b * e - c * d);
+            tN = (a * e - b * d);
+            if (sN < 0.0) {        	// sc < 0 => the s=0 edge is visible
+                sN = 0.0;
+                tN = e;
+                tD = c;
+            } else if (sN > sD) {  	// sc > 1  => the s=1 edge is visible
+                sN = sD;
+                tN = e + b;
+                tD = c;
+            }
+        }
+
+        if (tN < 0.0) {            	// tc < 0 => the t=0 edge is visible
+            tN = 0.0;
+            // recompute sc for this edge
+            if (-d < 0.0)
+                sN = 0.0;
+            else if (-d > a)
+                sN = sD;
+            else {
+                sN = -d;
+                sD = a;
+            }
+        } else if (tN > tD) {      // tc > 1  => the t=1 edge is visible
+            tN = tD;
+            // recompute sc for this edge
+            if ((-d + b) < 0.0)
+                sN = 0;
+            else if ((-d + b) > a)
+                sN = sD;
+            else {
+                sN = (-d + b);
+                sD = a;
+            }
+        }
+
+        // finally do the division to get sc and tc
+        sc = (Math.abs(sN) < EPS ? 0.0 : sN / sD);
+        tc = (Math.abs(tN) < EPS ? 0.0 : tN / tD);
+
+        Vector3d dP = new Vector3d(w);
+        dP.scaleAdd(sc, u, dP);
+        dP.scaleAdd(-tc, v, dP);
+
+        neighbourDist = dP.length();
+
+        return neighbourDist;
+    }
+
+    private double getBoundingBoxIntersectionArea(BSimCapsuleBacterium neighbour_bac, double r) {
+        double bac_radius = radius + r;
+        double neighbour_bac_radius = neighbour_bac.radius + r;
+        /*
+        double bac_x = Math.min(x1.x, x2.x) - bac_radius;
+        double bac_y = Math.max(x1.y, x2.y) + bac_radius;
+        double bac_w = Math.abs(x1.x - x2.x) + 2 * bac_radius;
+        double bac_h = Math.abs(x1.y - x2.y) + 2 * bac_radius;
+         */
+        Rectangle2D.Double bac_bbox = new Rectangle2D.Double(Math.min(x1.x, x2.x) - bac_radius, Math.max(x1.y, x2.y) + bac_radius,
+                Math.abs(x1.x - x2.x) + 2 * bac_radius, Math.abs(x1.y - x2.y) + 2 * bac_radius);
+        Rectangle2D.Double neighbour_bac_bbox = new Rectangle2D.Double(Math.min(neighbour_bac.x1.x, neighbour_bac.x2.x) - neighbour_bac_radius,
+                Math.max(neighbour_bac.x1.y, neighbour_bac.x2.y) + neighbour_bac_radius,
+                Math.abs(neighbour_bac.x1.x - neighbour_bac.x2.x) + 2 * neighbour_bac_radius,
+                Math.abs(neighbour_bac.x1.y - neighbour_bac.x2.y) + 2 * neighbour_bac_radius);
+        Rectangle2D intersection = bac_bbox.createIntersection(neighbour_bac_bbox);
+        double area = intersection.getHeight() * intersection.getWidth();
+        return (area > 0 ? area : 0);
+    }
+
+    private boolean getBoundingBoxIntersection(BSimCapsuleBacterium neighbour_bac, double r) {
+        double bac_radius = radius + r;
+        double neighbour_bac_radius = neighbour_bac.radius + r;
+
+        Rectangle2D.Double bac_bbox = new Rectangle2D.Double(Math.min(x1.x, x2.x) - bac_radius, Math.max(x1.y, x2.y) + bac_radius,
+                Math.abs(x1.x - x2.x) + 2 * bac_radius, Math.abs(x1.y - x2.y) + 2 * bac_radius);
+        Rectangle2D.Double neighbour_bac_bbox = new Rectangle2D.Double(Math.min(neighbour_bac.x1.x, neighbour_bac.x2.x) - neighbour_bac_radius,
+                Math.max(neighbour_bac.x1.y, neighbour_bac.x2.y) + neighbour_bac_radius,
+                Math.abs(neighbour_bac.x1.x - neighbour_bac.x2.x) + 2 * neighbour_bac_radius,
+                Math.abs(neighbour_bac.x1.y - neighbour_bac.x2.y) + 2 * neighbour_bac_radius);
+        return bac_bbox.intersects(neighbour_bac_bbox);
+    }
+
+    private double getOrientedBoundingBoxIntersectionPerimeter(BSimCapsuleBacterium neighbour_bac, double r) {
+        double bac_length = Math.sqrt(Math.pow(x2.x - x1.x, 2) + Math.pow(x2.y - x1.y, 2));
+        double neighbour_bac_length = Math.sqrt(Math.pow(neighbour_bac.x2.x - neighbour_bac.x1.x, 2)
+                + Math.pow(neighbour_bac.x2.y - neighbour_bac.x1.y, 2));
+        double bac_angle = Math.atan((x2.y - x1.y) / (x2.x - x1.x));
+        double neighbour_bac_angle = Math.atan((neighbour_bac.x2.y - neighbour_bac.x1.y) / (neighbour_bac.x2.x - neighbour_bac.x1.x));
+
+        Vector2d[] rectangle_bac = RectangleIntersection.rectangle_vertices(position.x, position.y,
+                bac_length + 2 * (radius + r), 2 * (radius + r), bac_angle);
+        Vector2d[] rectangle_neighbour = RectangleIntersection.rectangle_vertices(neighbour_bac.position.x,
+                neighbour_bac.position.y, neighbour_bac_length + 2 * (neighbour_bac.radius + r),
+                2 * (neighbour_bac.radius + r), neighbour_bac_angle);
+
+        return RectangleIntersection.rectangle_intersection_perimeter(rectangle_bac, rectangle_neighbour);
+    }
+
     // computes force between neighboring cells
     // originally htis was just overlap
     // Catie add filial and sticking forces
     public void computeNeighbourForce(BSimCapsuleBacterium neighbour_bac){
+
+        double neighbourDist = 0.0;
+        boolean neighbourDist_calculated = false;
 
         ////////////////overlap first////////////
 
@@ -369,6 +509,7 @@ public class BSimCapsuleBacterium {
         http://geomalgorithms.com/a07-_distance.html#dist3D_Segment_to_Segment
         Thank you!
         */
+
 
     	// Calculates the distance between two lines (see link above)
         Vector3d dist = new Vector3d(); 
@@ -447,7 +588,8 @@ public class BSimCapsuleBacterium {
             dP.scaleAdd(sc, u, dP);					
             dP.scaleAdd(-tc, v, dP);
 
-            double neighbourDist = dP.length();
+            neighbourDist = dP.length();
+            neighbourDist_calculated = true;
 
             // If a collision occurs
             if (neighbourDist < 2 * radius) {
@@ -603,8 +745,8 @@ public class BSimCapsuleBacterium {
             filialAxis=dis11; // set axis to x11-x12
             double stickyForceStrength=-k_filial*(d11-2 * radius-0.05*radius); //spring attaching endpoints
             filialAxis.normalize(); // normalize axis vector to get correct scaling
-            this.x1force.scaleAdd(stickyForceStrength,filialAxis,this.x1force); // adds the force to the endpoint
-            neighbour_bac.x1force.scaleAdd(-stickyForceStrength,filialAxis,neighbour_bac.x1force);
+            //this.x1force.scaleAdd(stickyForceStrength,filialAxis,this.x1force); // adds the force to the endpoint
+            //neighbour_bac.x1force.scaleAdd(-stickyForceStrength,filialAxis,neighbour_bac.x1force);
 
             //also a spring attaching furthest endpoints (but repulsive!) -> maybe this should be weaker?
             longFilialAxis=dis22;
@@ -619,8 +761,8 @@ public class BSimCapsuleBacterium {
             filialAxis=dis22; // set axis to x21-x22
             double stickyForceStrength=-k_filial*(d22-2 * radius-0.05*radius);
             filialAxis.normalize();
-            this.x2force.scaleAdd(stickyForceStrength,filialAxis,this.x2force);
-            neighbour_bac.x2force.scaleAdd(-stickyForceStrength,filialAxis,neighbour_bac.x2force);
+            //this.x2force.scaleAdd(stickyForceStrength,filialAxis,this.x2force);
+            //neighbour_bac.x2force.scaleAdd(-stickyForceStrength,filialAxis,neighbour_bac.x2force);
 
             longFilialAxis=dis11;
             double longFilialForceStrength=k_longfilial*(d11-2*radius-thisLength-neighborLength-0.05*radius);
@@ -633,8 +775,8 @@ public class BSimCapsuleBacterium {
             filialAxis=dis12; // set axis to x11-x22
             double stickyForceStrength=-k_filial*(d12-2 * radius -0.05*radius);
             filialAxis.normalize();
-            this.x1force.scaleAdd(stickyForceStrength,filialAxis,this.x1force);
-            neighbour_bac.x2force.scaleAdd(-stickyForceStrength,filialAxis,neighbour_bac.x2force);
+            //this.x1force.scaleAdd(stickyForceStrength,filialAxis,this.x1force);
+            //neighbour_bac.x2force.scaleAdd(-stickyForceStrength,filialAxis,neighbour_bac.x2force);
 
             longFilialAxis=dis21;
             double longFilialForceStrength=k_longfilial*(d21-2*radius-thisLength-neighborLength-0.05*radius);
@@ -647,8 +789,8 @@ public class BSimCapsuleBacterium {
             filialAxis=dis21; // set axis to x21-x12
             double stickyForceStrength=-k_filial*(d21-2 * radius -0.05*radius);
             filialAxis.normalize();
-            this.x2force.scaleAdd(stickyForceStrength,filialAxis,this.x2force);
-            neighbour_bac.x1force.scaleAdd(-stickyForceStrength,filialAxis,neighbour_bac.x1force);
+            //this.x2force.scaleAdd(stickyForceStrength,filialAxis,this.x2force);
+            //neighbour_bac.x1force.scaleAdd(-stickyForceStrength,filialAxis,neighbour_bac.x1force);
 
             longFilialAxis=dis12;
             double longFilialForceStrength=k_longfilial*(d12-2*radius-thisLength-neighborLength-0.05*radius);
@@ -660,16 +802,17 @@ public class BSimCapsuleBacterium {
         // sticking forces: end to end and across
         //sticking links (tertiary structure -> changes cell density)
         // these bonds happen between cells when they are side-by-side
-        if (dist.length()<range_sticking){ //dist is distance from midpoint to midpoint
-            double maxCellLength=Math.max(thisLength,neighborLength); // checks which cell is longer
+        if (dist.length()<range_sticking) { //dist is distance from midpoint to midpoint
+            //System.out.println(dist.length());
+            double maxCellLength = Math.max(thisLength, neighborLength); // checks which cell is longer
 
             // computes rest length of diagonally oriented springs -> sqrt((2r)^2 + L^2)
-            double stickingRestLong = Math.pow(4*radius*radius + maxCellLength*maxCellLength,0.5);
+            double stickingRestLong = Math.pow(4 * radius * radius + maxCellLength * maxCellLength, 0.5);
 
             // computes rest length of springs between closest endpoints
-            double stickingRestShort = 2.1*radius; //dont let this be too close to 2.0 or the simulation will chug due to collisions
+            double stickingRestShort = 2.1 * radius; //dont let this be too close to 2.0 or the simulation will chug due to collisions
 
-            Vector3d axis11=dis11;
+            Vector3d axis11 = dis11;
             axis11.normalize();
             Vector3d axis22 = dis22;
             axis22.normalize();
@@ -679,40 +822,57 @@ public class BSimCapsuleBacterium {
             axis21.normalize(); // gets directions for forces to point -> normalized displacement L/|L| as in paper
 
             double dot_product = u.dot(v);
-            
+
+            //double neighbourDist = getNeighbourDist(neighbour_bac);
+            //double contact_range = 2.0;
+            //double orientation_factor = 1/*Math.abs(dot_product / (u.length() * v.length()*/;
+            //double dampening = 1 - ( orientation_factor * Math.pow(2 * radius + contact_range - neighbourDist, 2) / Math.pow(contact_range, 2) );
+            //double dampening = 1.0;
+
+            double damping = 1.0;
+            if (!neighbourDist_calculated) {
+                neighbourDist = getNeighbourDist(neighbour_bac);
+            }
+            if (neighbourDist < 2 * (radius + contact_range_extension) /*getBoundingBoxIntersection(neighbour_bac, contact_range_extension)*/) {
+                double contact_area = getOrientedBoundingBoxIntersectionPerimeter(neighbour_bac, contact_range_extension);
+                //System.out.println(contact_area + " " + this.L + " " + neighbour_bac.L);
+                damping = Math.min(1.0, 1 - contact_area / contact_threshold);
+                //damping = 1.0;
+            }
+
             if (dot_product > 0 /*d11<d12 && d11 < d21*/){
                 // if cells are oriented same direction
-                double strength11 = -k_sticking*(d11-stickingRestShort);
+                double strength11 = -k_sticking*(d11-stickingRestShort) * damping;
                 this.x1force.scaleAdd(strength11,axis11,this.x1force);
                 neighbour_bac.x1force.scaleAdd(-strength11,axis11,neighbour_bac.x1force);
 
-                double strength22 = -k_sticking*(d22-stickingRestShort);
+                double strength22 = -k_sticking*(d22-stickingRestShort) * damping;
                 this.x2force.scaleAdd(strength22,axis22,this.x2force);
                 neighbour_bac.x2force.scaleAdd(-strength22,axis22,neighbour_bac.x2force);
 
-                double strength12 = -k_sticking*(d12-stickingRestLong);
+                double strength12 = -k_sticking*(d12-stickingRestLong) * damping;
                 this.x1force.scaleAdd(strength12,axis12,this.x1force);
                 neighbour_bac.x2force.scaleAdd(-strength12,axis12,neighbour_bac.x2force);
 
-                double strength21 = -k_sticking*(d21-stickingRestLong);
+                double strength21 = -k_sticking*(d21-stickingRestLong) * damping;
                 this.x2force.scaleAdd(strength21,axis21,this.x2force);
                 neighbour_bac.x1force.scaleAdd(-strength21,axis21,neighbour_bac.x1force);
             }
             else {
                 // if cells are oriented opposite direction
-                double strength11 = -k_sticking*(d11-stickingRestLong);
+                double strength11 = -k_sticking*(d11-stickingRestLong) * damping;
                 this.x1force.scaleAdd(strength11,axis11,this.x1force);
                 neighbour_bac.x1force.scaleAdd(-strength11,axis11,neighbour_bac.x1force);
 
-                double strength22 = -k_sticking*(d22-stickingRestLong);
+                double strength22 = -k_sticking*(d22-stickingRestLong) * damping;
                 this.x2force.scaleAdd(strength22,axis22,this.x2force);
                 neighbour_bac.x2force.scaleAdd(-strength22,axis22,neighbour_bac.x2force);
 
-                double strength12 = -k_sticking*(d12-stickingRestShort);
+                double strength12 = -k_sticking*(d12-stickingRestShort) * damping;
                 this.x1force.scaleAdd(strength12,axis12,this.x1force);
                 neighbour_bac.x2force.scaleAdd(-strength12,axis12,neighbour_bac.x2force);
 
-                double strength21 = -k_sticking*(d21-stickingRestShort);
+                double strength21 = -k_sticking*(d21-stickingRestShort) * damping;
                 this.x2force.scaleAdd(strength21,axis21,this.x2force);
                 neighbour_bac.x1force.scaleAdd(-strength21,axis21,neighbour_bac.x1force);
             }
