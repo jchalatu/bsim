@@ -1,6 +1,6 @@
-package BSimPhageField;
+package BSimPhageLogger;
 
-import bsim.BSim;
+import bsim.BSim;  
 
 import bsim.BSimChemicalField;
 import bsim.BSimTicker;
@@ -9,9 +9,9 @@ import bsim.capsule.BSimCapsuleBacterium;
 import bsim.capsule.Mover;
 import bsim.capsule.RelaxationMoverGrid;
 import bsim.draw.BSimDrawer;
-import bsim.draw.BSimP3DDrawer;
 import bsim.export.BSimLogger;
 import bsim.export.BSimPngExporter;
+import bsim.winter2021.P3DDrawer;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -21,10 +21,6 @@ import processing.core.PGraphics3D;
 
 import javax.vecmath.*;
 import java.awt.*;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.*;
@@ -42,11 +38,14 @@ import java.io.File;
  */
 public class BSimPhageField {
 	
+	/** Pixel to micrometer ratio. */
+	static final double pixel_to_um_ratio = 13.89;
+	
     /** Whether to enable growth in the ticker etc. or not... */
     private static final boolean WITH_GROWTH = true;
     
     /** Whether to flow phage in through the side of the boundary. */
-    private static final boolean FLOW_IN = true;
+    private static final boolean FLOW_IN = false; 
     
     // Boundaries
     // Boolean flag: specifies whether any walls are needed
@@ -61,10 +60,6 @@ public class BSimPhageField {
     // Simulation setup parameters. Set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
     public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {75.0, 50.0, 1.0} ));
-    // 75.0, 50.0, 1.0
-    // 100.0, 50.0, 1.0
-    // 125.0, 75.0, 1.0		
-    // 198.0, 159.0, 1.0	// Use for onecell.csv
 
     // Grid ->
     // 52x42 -> 546
@@ -75,27 +70,29 @@ public class BSimPhageField {
     // Density (cell number)
     // optional call to a default initial set of cells
     @Parameter(names = "-pop", arity = 1, description = "Initial seed population (n_total).")
-    public int initialPopulation = 1;//2;
+    public int initialPopulation = 1;
 
     // A:R ratio
     // for default set of cells, set ratio of two subpopulations
     @Parameter(names = "-ratio", arity = 1, description = "Ratio of initial populations (proportion of activators).")
     public double populationRatio = 0.0;
-
+    
     //growth rate standard deviation
-    @Parameter(names="-gr_stdv",arity=1,description = "growth rate standard deviation")
-    public static double growth_stdv = 0.02;		
-    //public static double growth_stdv = 0.277;		// From storck paper
-    @Parameter(names="-gr_mean",arity=1,description = "growth rate mean")
-    public static double growth_mean = 0.5;
-    //public static double growth_mean = 1.23;		// From storck paper (1.23 +- 0.277/hr)
+    @Parameter(names="-el_stdv",arity=1,description = "elongation rate standard deviation")
+    public static double el_stdv = 0.277;//0.2;//0.02;		
+    @Parameter(names="-el_mean",arity=1,description = "elongation rate mean")
+    public static double el_mean = 1.23;//2.1;//0.5;
 
     //elongation threshold standard deviation
-    @Parameter(names="-len_stdv",arity=1,description = "elongation threshold standard deviation")
-    public static double length_stdv = 0.1;
+    @Parameter(names="-div_stdv",arity=1,description = "elongation threshold standard deviation")
+    public static double div_stdv = 0.1;
     //elongation threshold mean
-    @Parameter(names="-len_mean",arity=1,description = "elongation threshold mean")
-    public static double length_mean = 7.0;
+    @Parameter(names="-div_mean",arity=1,description = "elongation threshold mean")
+    public static double div_mean = 7.0;
+    
+    // Simulation Time
+    @Parameter(names="-simt",arity=1,description = "simulation time")
+    public static double sim_time = 6.5;
     
     /** Defines the progress of the chemical field flowing through the boundary on the x-axis. */
     int endpoint_x = 0;
@@ -123,13 +120,15 @@ public class BSimPhageField {
         bacRng.setSeed(50); 				// Initializes random number generator
         
         // Random initial positions 
-        Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x, 
+        Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x, //x/10
 				Math.random()*sim.getBound().y, 
 				Math.random()*sim.getBound().z);
-				
+		
+        Vector3d pos2 = new Vector3d(pos1.x + 1, pos1.y + 1, pos1.z);
+        /*
         Vector3d pos2 = new Vector3d(Math.random()*sim.getBound().x, 
 				Math.random()*sim.getBound().y, 
-				Math.random()*sim.getBound().z);
+				Math.random()*sim.getBound().z);*/
         
         // Creates a new bacterium object whose endpoints correspond to the above data
         PhageFieldBacterium bacterium = new PhageFieldBacterium(sim, field, pos1, pos2);
@@ -145,12 +144,12 @@ public class BSimPhageField {
         if (length < bacterium.L_max) {
             bacterium.initialise(length, pos1, pos2); 	// Redundant to record length, but ok.
         }
-
+        
         // Assigns a growth rate and a division length to bacterium according to a normal distribution
-        double growthRate = growth_stdv * bacRng.nextGaussian() + growth_mean;
+        double growthRate = el_stdv * bacRng.nextGaussian() + el_mean;
         bacterium.setK_growth(growthRate);
         
-        double lengthThreshold = length_stdv * bacRng.nextGaussian() + length_mean;
+        double lengthThreshold = div_stdv * bacRng.nextGaussian() + div_mean;
         bacterium.setElongationThreshold(lengthThreshold);
 
         return bacterium;
@@ -179,9 +178,9 @@ public class BSimPhageField {
 		 * Create a new simulation object and set up simulation settings
 		 */
         final BSim sim = new BSim();
-        sim.setDt(0.05);				    // Set simulation timestep in time units (0.01)
+        sim.setDt(0.05);					// Set simulation timestep in time units (0.01)
         									// Let the time units be in hours
-        sim.setSimulationTime(100);       	// Specified in time units, could also specify a termination condition elsewhere
+        sim.setSimulationTime(sim_time);    // Specified in time units, could also specify a termination condition elsewhere
         sim.setTimeFormat("0.00");		    // Time Format for display on images
         sim.setBound(simX, simY, simZ);		// Simulation domain Boundaries
 
@@ -220,7 +219,7 @@ public class BSimPhageField {
 		 */
 		
 		Vector3d initial_phage_pos = new Vector3d(25, 30, 0);
-		final double initial_phage_num = 1e7;   
+		final double initial_phage_num = 0;//1e7;   
 		
 		// Case 1
 		if ( !FLOW_IN ) {
@@ -248,72 +247,9 @@ public class BSimPhageField {
         Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
 
-        /** Empty list which will later contain the endpoint of rectangle positions 4 = x1,y1,x2,y2. */
-        double[][] initEndpoints = new double[4][];
-
         // Gets the location of the file that is currently running
         // Specify output file path
-        String systemPath = new File("").getAbsolutePath()+"\\SingleCellSims";
-
-        // Creates a new csvreader object which can extract data from .csv files
-        BufferedReader csvReader = null;
-        try {
-            // try reading the initial position file
-            csvReader = new BufferedReader(new FileReader("C:\\Users\\sheng\\Documents\\CO-OP_W2021\\Research_Assistant\\Catie_BSim\\onecell.csv"));
-        } catch (FileNotFoundException e) {
-            // If that doesn't work, print out an error
-            e.printStackTrace();
-        }
- 
-        // If loading the content works, try reading the data
-        // Updated: Previous version gave Exception in thread "main" java.lang.NumberFormatException: empty String
-        try {
-        	
-            // Goes through each row of the excel sheet and pulls out the initial positions
-            String row = csvReader.readLine();
-            int i = 0;
-            while (row != null) {
-            	
-                // Row.split takes a single line of the excel sheet and chops it up into the columns
-                // mapToDouble takes the values in those columns and converts them to Java double data format
-                // toArray converts the data into an array
-            	
-            	// In case of empty string, first check that the row is not blank
-            	if (!row.isBlank()) {
-            		initEndpoints[i] = Arrays.stream(row.split(",")).mapToDouble(Double::parseDouble).toArray();
-            		
-            		i ++;
-            	}
-            	row = csvReader.readLine();
-            }
-            csvReader.close(); 				// Close the file once all data is extracted    
-        }
-        
-        catch(IOException e) {
-            e.printStackTrace(); 			// If there is an error, this will just print out the message
-        }
-/*
-        // Now that the data is extracted, we can create the bacterium objects
-       for(int j = 0; j < initEndpoints[0].length; j++){
-        	
-            // Initializes the endpoints of each bacterium from the array of endpoints
-            // z-dimension is a small number, randomly generated, not sure why.
-            Vector3d x1 = new Vector3d(initEndpoints[0][j]/13.89,initEndpoints[1][j]/13.89,bacRng.nextDouble()*0.1*(simZ - 0.1)/2.0);
-            Vector3d x2 = new Vector3d(initEndpoints[2][j]/13.89,initEndpoints[3][j]/13.89,bacRng.nextDouble()*0.1*(simZ - 0.1)/2.0);
-            // Note: the endpoint positions are scaled by 13.89, since the images are a bit more than 2000 pixels wide
-            // While the simulation is rougly 200 micrometers. the conversion factor ends up being 13.89
-            // Pixel to um scaling
-
-            // Creates a new bacterium object whose endpoints correspond to the above data
-            Bacterium bac0 = createBacterium(sim, field, x1, x2);
-
-            // Adds the newly created bacterium to our lists for tracking purposes
-            bac.add(bac0); 			// For separate subpopulations
-            bacteriaAll.add(bac0);  // For all cells
-        	
-        } */
-        
-        /** Creating random bacterium objects to demonstrate phage field */
+        String systemPath = new File("").getAbsolutePath()+"\\PhageFieldSims";
 
 		// Create new phage sensing bacteria objects randomly in space
 		while( bacteriaAll.size() < initialPopulation ) {	
@@ -418,11 +354,11 @@ public class BSimPhageField {
 
                     for (PhageFieldBacterium b : bac) { 				// Loop over bac array
                         b.grow();
-
+                        
                         // Divide if grown past threshold
                         if (b.L >= b.L_th) {
                         	PhageFieldBacterium daughter = b.divide();
-                        	
+                    		
                         	// If the cell is infected, the daughter cell is also infected
                         	if ( b.isInfected() ) {
                         		daughter.setInfected(true);
@@ -439,10 +375,10 @@ public class BSimPhageField {
                     for ( PhageFieldBacterium b : bac_born ) {
                     	
                         // Assigns a growth rate and a division length to each bacterium according to a normal distribution
-                        double growthRate = growth_stdv*bacRng.nextGaussian() + growth_mean;
+                        double growthRate = el_stdv*bacRng.nextGaussian() + el_mean;
                         b.setK_growth(growthRate);
 
-                        double lengthThreshold = length_stdv*bacRng.nextGaussian()+length_mean;
+                        double lengthThreshold = div_stdv*bacRng.nextGaussian() + div_mean;
                         b.setElongationThreshold(lengthThreshold);
                     }
                     
@@ -507,7 +443,7 @@ public class BSimPhageField {
         /*********************************************************
          * Set up the drawer
          */
-        BSimDrawer drawer = new BSimP3DDrawer(sim, 800, 600) {	//2752, 2208
+        BSimDrawer drawer = new P3DDrawer(sim, 800, 600) {	//2752, 2208
             /**
              * Draw the default cuboid boundary of the simulation as a partially transparent box
              * with a wireframe outline surrounding it.
@@ -579,8 +515,9 @@ public class BSimPhageField {
         };
         sim.setDrawer(drawer);
         
-        export = false;
+        export = true;
         if(export) {
+        	/*
             String simParameters = "" + BSimUtils.timeStamp() + "__dim_" + simX + "_" + simY + "_" + simZ
                     + "__ip_" + initialPopulation
                     + "__pr_" + populationRatio;
@@ -589,11 +526,14 @@ public class BSimPhageField {
                 simParameters += "__fixedBounds";
             } else {
                 simParameters += "__leakyBounds";
-            }
-
+            }*/ // Changed folder name for pipeline
+        	
+        	String simParameters = "params_" + el_mean + "_" + el_stdv + "_" + div_mean + "_" + div_stdv;
+        			
             String filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
 //            String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
 
+            double export_time = 0.5; // Previously was 10, and simulation time was 100
             /*********************************************************
              * Various properties of the simulation, for future reference.
              */
@@ -619,7 +559,7 @@ public class BSimPhageField {
 
                 }
             };
-            metaLogger.setDt(10);//3600);			// Set export time step
+            metaLogger.setDt(export_time);			// Set export time step
             sim.addExporter(metaLogger);
 
             BSimLogger posLogger = new BSimLogger(sim, filePath + "position.csv") {
@@ -656,12 +596,10 @@ public class BSimPhageField {
 
                 }
             };
-            posLogger.setDt(10);			// set export time step for csv file
+            posLogger.setDt(export_time);			// set export time step for csv file
             sim.addExporter(posLogger);
 
-
             BSimLogger sumLogger = new BSimLogger(sim, filePath + "summary.csv") {
-
 
                 @Override
                 public void before() {
@@ -693,16 +631,23 @@ public class BSimPhageField {
                     write(buffer);
                 }
             };
-            sumLogger.setDt(10);			// Set export time step
+            sumLogger.setDt(export_time);			// Set export time step
             sim.addExporter(sumLogger);
 
             /**
              * Export a rendered image file
              */
             BSimPngExporter imageExporter = new BSimPngExporter(sim, drawer, filePath );
-            imageExporter.setDt(10); //this is how often it will output a frame
+            imageExporter.setDt(export_time); //this is how often it will output a frame
             // separate time-resolution for images vs excel file
             sim.addExporter(imageExporter);
+            
+            /**
+             * Export a csv file to save information about infection
+             */
+            PhageFieldLogger infection_logger = new PhageFieldLogger(sim, filePath + "BSim_Simulation.csv", bac);
+            infection_logger.setDt(export_time);			// Set export time step
+            sim.addExporter(infection_logger);
 
             sim.export();
 

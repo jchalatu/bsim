@@ -1,20 +1,12 @@
-package BSimPhageField;
+package BSimPhageLogger;
 
-import bsim.BSim;
+import bsim.BSim; 
 
 import bsim.BSimChemicalField;
-import bsim.capsule.BSimCapsuleBacterium;
 import bsim.winter2021.Bacterium;
 
 import javax.vecmath.Vector3d;
-import com.beust.jcommander.Parameter;
-
-import java.awt.*;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.*;
-import java.util.List;
-import java.lang.Math;
 /**
  */
 public class PhageFieldBacterium extends Bacterium {
@@ -35,7 +27,6 @@ public class PhageFieldBacterium extends Bacterium {
 	private int pDelayCount;	
 	/** Life span counter in a bacterium. */
 	private int lifeCount;	
-	/** Counter for asymmetric growth (in hours). */
 	
 	/** Status of phage occupation within bacterium. */
 	private boolean infected;
@@ -44,13 +35,26 @@ public class PhageFieldBacterium extends Bacterium {
 	/** Flag for cell death. */
 	private boolean isDying;
 	
+	/** Time of infection. */
+	private double infection_time = -1;
+    
+    /** Elongation rate of infected bacteria. */
+    private double infectedGrowthRate;
+    private double inf_growth_mean = 0.217;			// From stork paper (0.217 +-0.0434/hr)
+    private double inf_growth_stdv = 0.0434;		
+    
+	/** Elongation rate of dying cells. */
+    private double shrinkRate;
+    private double shrink_mean = -0.217;			// From stork paper (-0.217 +-0.0434/hr)
+    private double shrink_stdv = 0.0434;	
+    
 	// Function you call when you want to make a new bacterium object
     public PhageFieldBacterium(BSim sim, BSimChemicalField field, Vector3d px1, Vector3d px2) {
 		super(sim, px1, px2);
 		
         this.field = field;						
         phageNum = 1000;				// 1000 phages/hr
-        productionDelay = 2; 			// hrs // #ticks = productionDelay / getDt()
+        productionDelay = 2; 			// hrs 
         lifeSpan = 20;					// hrs
         threshold = 1e2;	
         
@@ -60,6 +64,12 @@ public class PhageFieldBacterium extends Bacterium {
         infected = false;
         production = false;
         isDying = false;  
+        
+        Random bacRng = new Random(); 		// Random number generator
+        
+        // Calculated once
+        infectedGrowthRate = inf_growth_stdv * bacRng.nextGaussian() + inf_growth_mean;
+        shrinkRate = shrink_stdv * bacRng.nextGaussian() + shrink_mean;
 	}	
 
     // In case we want our bacteria to do anything special, we can add things to action() here that an ordinary
@@ -68,36 +78,28 @@ public class PhageFieldBacterium extends Bacterium {
     public void action() { 						// Runs at every time step
         super.action();
         
-        /** Updated to allow phage infection and production. */
-        
 		// Infection occurs if phage concentration around cell exceeds a certain threshold
 		if( field.getConc(position) > getThreshold() ) {
 			setInfected( true ); 				// Update infection status
 		}
 		
+        // Save time of infection
+        if ( getInfectionTime() == -1 && isInfected() ) {
+        	setInfectionTime( sim.getTimestep() * sim.getDt() );
+        }
+        
 		// Cell behavior is changed when infected
 		if ( isInfected() ) {
 			
 	        // Assigns a growth rate to infected bacterium according to a normal distribution
 			// Infected cells have lower growth rate
-			Random bacRng = new Random();
-			
-		    double inf_growth_stdv = 0.0434;		// From stork paper
-		    double inf_growth_mean = 0.217;			// From stork paper (0.217 +-0.0434/hr)
-		    
-	        double infectedGrowthRate = inf_growth_stdv * bacRng.nextGaussian() + inf_growth_mean;
 	        setK_growth(infectedGrowthRate);
-	        
-	        // Cell Death
-		    double shrink_stdv = 0.0434;			// From stork paper
-		    double shrink_mean = -0.217;			// From stork paper (-0.217 +-0.0434/hr)
-		    
-	        double shrinkRate = shrink_stdv * bacRng.nextGaussian() + shrink_mean;
 			
 			// Cell death
 			if ( lifeCount == lifeSpan / sim.getDt() ) {
 	    		setDying(true);						// Cell death begins
-	    		setK_growth(shrinkRate);			// Cell starts shrinking
+	    		//elongation_rate = shrinkRate;
+	    		setK_growth(shrinkRate);		// Cell starts shrinking
 	    		setProduction(false); 				// Cell stops producing phage
 			}
 			else {
@@ -120,44 +122,30 @@ public class PhageFieldBacterium extends Bacterium {
     }
     
     /** Sets the life span of a bacterium. */
-    public void setLifeSpan( int lifeSpan ) {
-    	this.lifeSpan = lifeSpan;
-    }
+    public void setLifeSpan( int lifeSpan ) {this.lifeSpan = lifeSpan;}
     
     /** Sets the status of phage infection for a bacterium. */
-    public void setInfected( boolean infected) {
-        this.infected = infected;
-    }
-    
+    public void setInfected( boolean infected) {this.infected = infected;}
     /** Returns the status of phage infection for a bacterium. */
-    public boolean isInfected() {
-        return this.infected;
-    }
+    public boolean isInfected() {return this.infected;}
 	
     /** Returns the phage threshold for a bacterium. */
-    public double getThreshold() {
-        return this.threshold;
-    }
+    public double getThreshold() {return this.threshold;}
     
     /** Returns the flag for the internal phage production of a bacterium. */
-    public boolean isProducing() {
-        return this.production;
-    }
-    
+    public boolean isProducing() {return this.production;}
     /** Sets the flag for the internal phage production of a bacterium. */
-    public void setProduction( boolean production) {
-        this.production = production;
-    }
+    public void setProduction( boolean production) {this.production = production;}
     
     /** Returns the flag for cell death. */
-    public boolean isDying() {
-        return this.isDying;
-    }
-    
+    public boolean isDying() {return this.isDying;}
     /** Sets the flag for cell death. */
-    public void setDying( boolean d ) {
-        this.isDying = d;
-    }
+    public void setDying( boolean d ) {this.isDying = d;}
+    
+    /** Returns the time of infection. */
+    public double getInfectionTime() {return infection_time;}
+    /** Sets the time of infection. */
+    public void setInfectionTime( double t ) {infection_time = t;}
     
     // Allows us to change growth rate mechanics for individual cells
     @Override

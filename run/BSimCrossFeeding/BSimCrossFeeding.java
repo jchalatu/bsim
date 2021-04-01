@@ -11,6 +11,7 @@ import bsim.draw.BSimDrawer;
 import bsim.draw.BSimP3DDrawer;
 import bsim.export.BSimLogger;
 import bsim.export.BSimPngExporter;
+import bsim.winter2021.P3DDrawer;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -144,13 +145,13 @@ public class BSimCrossFeeding {
 				Math.random()*sim.getBound().z);*/
         
         // Initiates bacteria closer together
-        Vector3d pos1 = new Vector3d(20 + Math.random()*sim.getBound().x/3, 
-				10 + Math.random()*sim.getBound().y/2, 
+        Vector3d pos1 = new Vector3d(20 + Math.random()*sim.getBound().x/4, 
+				15 + Math.random()*sim.getBound().y/3, 
 				Math.random()*sim.getBound().z);
         
         // Changed position to random (?) for now
-        Vector3d pos2 = new Vector3d(20 + Math.random()*sim.getBound().x/3, 
-				10 + Math.random()*sim.getBound().y/2, 
+        Vector3d pos2 = new Vector3d(20 + Math.random()*sim.getBound().x/4, 
+				15 + Math.random()*sim.getBound().y/3, 
 				Math.random()*sim.getBound().z);
         
         // Creates a new bacterium object whose endpoints correspond to the above data
@@ -275,9 +276,9 @@ public class BSimCrossFeeding {
 		/*********************************************************
 		 * Set up the antibiotic field
 		 */
-		final double c = 7e2;//1e3;        				// Molecules; Decrease this to see lower concentration
+		final double c = 7e2;        				// Molecules; Decrease this to see lower concentration
 		final double decayRate = 0.0;				// Decay rate of antibiotics
-		final double diffusivity = 3.0;//7.0;//15.0;		// (Microns)^2/sec
+		final double diffusivity = 2.0;				// (Microns)^2/sec
 		
 		final int field_box_num = 50;				// Number of boxes to represent the chemical field
 		final BSimChemicalField amino_acid_A = new BSimChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
@@ -291,12 +292,12 @@ public class BSimCrossFeeding {
         Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
 
-        /** Empty list which will later contain the endpoint of rectangle positions 4 = x1,y1,x2,y2. */
-        double[][] initEndpoints = new double[4][];
-
         // Gets the location of the file that is currently running
         // Specify output file path
         String systemPath = new File("").getAbsolutePath()+"\\SingleCellSims";
+        
+        /** Empty list which will later contain the endpoint of rectangle positions 4 = x1,y1,x2,y2. */
+        /*double[][] initEndpoints = new double[4][];
 
         // Creates a new csvreader object which can extract data from .csv files
         BufferedReader csvReader = null;
@@ -336,7 +337,7 @@ public class BSimCrossFeeding {
             e.printStackTrace(); 			// If there is an error, this will just print out the message
         }
         
-        /*
+        
         // Now that the data is extracted, we can create the bacterium objects
        for(int j = 0; j < initEndpoints[0].length; j++){
         	
@@ -473,7 +474,7 @@ public class BSimCrossFeeding {
         /*********************************************************
          * Set up the drawer
          */
-        BSimDrawer drawer = new BSimP3DDrawer(sim, 800, 600) {	//2752, 2208
+        BSimDrawer drawer = new P3DDrawer(sim, 800, 600) {	//2752, 2208
             /**
              * Draw the default cuboid boundary of the simulation as a partially transparent box
              * with a wireframe outline surrounding it.

@@ -1,6 +1,7 @@
 package bsim.capsule;
 
 import bsim.BSim;
+
 import bsim.ode.BSimOdeSystem;
 import bsim.winter2021.RectangleIntersection;
 
@@ -75,7 +76,7 @@ public class BSimCapsuleBacterium {
     /*public void setInfected(Boolean infected){
         this.infected = infected;
     }*/
-    
+	
     /** Angle between daughter cells at division. */
     public double angle_initial = 0.0; 
     
@@ -277,7 +278,7 @@ public class BSimCapsuleBacterium {
         flowBelow(x1.y, x1force, new Vector3d(0.5, 0, 0), sim.getBound().y);
         flowBelow(x2.y, x2force, new Vector3d(0.5, 0, 0), sim.getBound().y);
     }
-
+	
     /*
     COMMENT ADDED BY ORIGINAL AUTHOR
     TODO - need proper wall contact location computation to implement flow past.
@@ -287,7 +288,8 @@ public class BSimCapsuleBacterium {
     // It seems like the original authors did not correctly account for cases where the cell may come in contact
     // with the corner of a wall. In this case, the corner should apply a torque to the cell based on where it collides.
     // This seems complicated.
-    // For now, this function should only be used to compute forces between flat walls and a bacterium.
+    // For now, this function should only be used to compute forces between flat walls and a bacterium
+	/** Updated to allow for different wall boundary conditions. */
     public void computeWallForce(){
         // TODO::: Ideally, there should also be a bounds check on the side NEXT to the one from which bacs can exit
         /**
@@ -299,20 +301,33 @@ public class BSimCapsuleBacterium {
          *            .            .  *stopped* by the RHS bound check!
          *
          */
-        wallBelow(x1.x, x1force, new Vector3d(1,0,0));
-        wallBelow(x1.y, x1force, new Vector3d(0,1,0)); // TOP //
-        wallBelow(x1.z, x1force, new Vector3d(0,0,1));
-        wallAbove(x1.x, x1force, new Vector3d(-1, 0, 0), sim.getBound().x);
-        wallAbove(x1.y, x1force, new Vector3d(0, -1, 0), sim.getBound().y); // BOTTOM //
-        wallAbove(x1.z, x1force, new Vector3d(0, 0, -1), sim.getBound().z);
-
-        wallBelow(x2.x, x2force, new Vector3d(1,0,0));
-        wallBelow(x2.y, x2force, new Vector3d(0,1,0)); // TOP //
-        wallBelow(x2.z, x2force, new Vector3d(0,0,1));
-        wallAbove(x2.x, x2force, new Vector3d(-1,0,0), sim.getBound().x);
-        wallAbove(x2.y, x2force, new Vector3d(0, -1, 0), sim.getBound().y); // BOTTOM //
-        wallAbove(x2.z, x2force, new Vector3d(0, 0, -1), sim.getBound().z);
-
+    	
+    	if ( sim.wall_boundaries[0] ) {
+    		wallBelow(x1.x, x1force, new Vector3d(1,0,0));
+    		wallBelow(x2.x, x2force, new Vector3d(1,0,0));
+    	}
+    	if ( sim.wall_boundaries[1] ) {
+    		wallBelow(x1.y, x1force, new Vector3d(0,1,0)); // TOP //
+    		wallBelow(x2.y, x2force, new Vector3d(0,1,0)); // TOP //
+    	}
+    	if ( sim.wall_boundaries[2] ) {
+    		wallBelow(x1.z, x1force, new Vector3d(0,0,1));
+    		wallBelow(x2.z, x2force, new Vector3d(0,0,1));
+    	}
+        
+        if ( sim.wall_boundaries[3] ) {
+        	wallAbove(x1.x, x1force, new Vector3d(-1,0,0), sim.getBound().x);
+        	wallAbove(x2.x, x2force, new Vector3d(-1,0,0), sim.getBound().x);
+        }
+        if ( sim.wall_boundaries[4] ) {
+        	wallAbove(x1.y, x1force, new Vector3d(0, -1, 0), sim.getBound().y); // BOTTOM //
+        	wallAbove(x2.y, x2force, new Vector3d(0, -1, 0), sim.getBound().y); // BOTTOM //
+        }
+        if ( sim.wall_boundaries[5] ) {
+        	wallAbove(x1.z, x1force, new Vector3d(0, 0, -1), sim.getBound().z);
+        	wallAbove(x2.z, x2force, new Vector3d(0, 0, -1), sim.getBound().z);
+        }
+        
         ///////////////////////////Catie Terrey
         // added forces from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4017289/
 
@@ -503,7 +518,6 @@ public class BSimCapsuleBacterium {
         /*
         COMMENT FROM ORIGINAL AUTHOR
         Vector returned (dP) is from the second bac, heading to the first
-
         Geometric Tools for Computer Graphics book,
         Also,
         http://geomalgorithms.com/a07-_distance.html#dist3D_Segment_to_Segment
@@ -602,10 +616,8 @@ public class BSimCapsuleBacterium {
                     OK, this section is not right.
                     We want the projection of dP (or 0.5*dP???)
                     onto the vector from intersection point to x1 (or x2)
-
                     ... Actually, not so sure. I think we could use the dP weighted by inverse distance
                     between the intersection point and x1/x2 as in Storck et al.
-
                     ... Or the single sphere approximation from Volfson.
                     Test + compare the alternatives if this doesn't work.
                     */

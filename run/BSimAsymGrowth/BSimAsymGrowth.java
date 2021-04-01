@@ -39,6 +39,9 @@ public class BSimAsymGrowth {
     /** Whether to enable growth in the ticker etc. or not... */
     private static final boolean WITH_GROWTH = true;
     
+    /** Wall boundaries of the bacteria (+x, +y, +z, -x, -y, -z). */
+    private final boolean [] wall_boundaries = {false, false, true, false, false, true};
+    
     // Boundaries
     // Boolean flag: specifies whether any walls are needed
     @Parameter(names = "-fixedbounds", description = "Enable fixed boundaries. (If not, one boundary will be leaky as real uf chamber).")
@@ -52,11 +55,8 @@ public class BSimAsymGrowth {
     // Simulation setup parameters. Set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
     public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {75.0, 50.0, 1.0} ));
-    // 75.0, 50.0, 1.0
-    // 100.0, 50.0, 1.0
-    // 125.0, 75.0, 1.0		
-    // 198.0, 159.0, 1.0	// Use for onecell.csv
-
+    // 198.0, 159.0, 1.0	// onecell.csv
+    
     // Grid ->
     // 52x42 -> 546
     // 100x86 -> 2150
@@ -66,7 +66,7 @@ public class BSimAsymGrowth {
     // Density (cell number)
     // optional call to a default initial set of cells
     @Parameter(names = "-pop", arity = 1, description = "Initial seed population (n_total).")
-    public int initialPopulation = 1;//2;
+    public int initialPopulation = 2;
 
     // A:R ratio
     // for default set of cells, set ratio of two subpopulations
@@ -75,12 +75,10 @@ public class BSimAsymGrowth {
 
     //growth rate standard deviation
     @Parameter(names="-gr_stdv",arity=1,description = "growth rate standard deviation")
-    public static double growth_stdv = 0.05;		
-    //public static double growth_stdv = 0.277;		// From storck paper
+    public static double growth_stdv = 0.02;		
     //growth rate mean
     @Parameter(names="-gr_mean",arity=1,description = "growth rate mean")
-    public static double growth_mean = 0.2;
-    //public static double growth_mean = 1.23;		// From storck paper (1.23 +- 0.277/hr)
+    public static double growth_mean = 0.5;
 
     //elongation threshold standard deviation
     @Parameter(names="-len_stdv",arity=1,description = "elongation threshold standard deviation")
@@ -129,15 +127,14 @@ public class BSimAsymGrowth {
         // Earlier they were all initialized to length 1.
         Vector3d dispx1x2 = new Vector3d();
         dispx1x2.sub(pos2, pos1); 						// Sub is subtract
-        double length = dispx1x2.length(); 			// Determined.
+        double length = dispx1x2.length(); 				// Determined.
         
         if (length < bacterium.L_max) {
             bacterium.initialise(length, pos1, pos2); 	// Redundant to record length, but ok.
         }
 
         // Assigns a growth rate and a division length to bacterium according to a normal distribution
-        //double growthRate = growth_stdv * bacRng.nextGaussian() + growth_mean;/////////////
-        double growthRate = 0.5;
+        double growthRate = growth_stdv * bacRng.nextGaussian() + growth_mean;
         bacterium.setK_growth(growthRate);
         
         double lengthThreshold = length_stdv * bacRng.nextGaussian() + length_mean;
@@ -178,9 +175,11 @@ public class BSimAsymGrowth {
 		// NOTE - solid = false sets a periodic boundary condition. 
 		// This overrides leakiness!
 		sim.setSolid(true, true, true);		// Solid (true) or wrapping (false) boundaries
-
         // Leaky -> bacteria can escape from sides of six faces of the box. 
 		// Only usable if fixedbounds allows it
+		
+		// Set the wall boundaries
+		sim.setWallBoundaries(wall_boundaries);
 		
 		// Set a closed or open boundary for phage diffusion
 		if ( fixedBounds ) {
@@ -208,12 +207,12 @@ public class BSimAsymGrowth {
         Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
 
-        /** Empty list which will later contain the endpoint of rectangle positions 4 = x1,y1,x2,y2. */
-        double[][] initEndpoints = new double[4][];
-
         // Gets the location of the file that is currently running
         // Specify output file path
         String systemPath = new File("").getAbsolutePath()+"\\SingleCellSims";
+        
+        /** Empty list which will later contain the endpoint of rectangle positions 4 = x1,y1,x2,y2. */
+        /*double[][] initEndpoints = new double[4][];
 
         // Creates a new csvreader object which can extract data from .csv files
         BufferedReader csvReader = null;
@@ -252,7 +251,7 @@ public class BSimAsymGrowth {
         catch(IOException e) {
             e.printStackTrace(); 			// If there is an error, this will just print out the message
         }
-/*
+
         // Now that the data is extracted, we can create the bacterium objects
        for(int j = 0; j < initEndpoints[0].length; j++){
         	
@@ -276,7 +275,7 @@ public class BSimAsymGrowth {
         /** Creating random bacterium objects to demonstrate phage field */
 
 		// Create new phage sensing bacteria objects randomly in space
-		while( bacteriaAll.size() < initialPopulation ) {	
+		while( bacteriaAll.size() < initialPopulation) {
             
             // Creates a new bacterium object whose endpoints correspond to the above data
 			Bacterium bacterium = createBacterium(sim);
@@ -349,7 +348,6 @@ public class BSimAsymGrowth {
                         // Divide if grown past threshold
                         if (b.L >= b.L_th) {
                         	Bacterium daughter = b.divide();
-                        	
                         	bac_born.add(daughter);  		// Add daughter to newborn class, 'mother' keeps her status
                         }
                     }
@@ -361,8 +359,7 @@ public class BSimAsymGrowth {
                     for ( Bacterium b : bac_born ) {
                     	
                         // Assigns a growth rate and a division length to each bacterium according to a normal distribution
-                        //double growthRate = growth_stdv*bacRng.nextGaussian() + growth_mean;
-                        double growthRate = 0.5;
+                        double growthRate = growth_stdv*bacRng.nextGaussian() + growth_mean;
                         b.setK_growth(growthRate);
 
                         double lengthThreshold = length_stdv*bacRng.nextGaussian()+length_mean;
@@ -430,7 +427,7 @@ public class BSimAsymGrowth {
         /*********************************************************
          * Set up the drawer
          */
-        BSimDrawer drawer = new BSimP3DDrawer(sim, 800, 600) {	//2752, 2208
+        BSimDrawer drawer = new BSimP3DDrawer(sim, 800, 600) {	
             /**
              * Draw the default cuboid boundary of the simulation as a partially transparent box
              * with a wireframe outline surrounding it.
