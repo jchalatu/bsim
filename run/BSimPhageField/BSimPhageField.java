@@ -1,4 +1,4 @@
-package BSimPhageField;
+package BSimPhageLogger;
 
 import bsim.BSim;  
 
@@ -92,7 +92,7 @@ public class BSimPhageField {
     
     // Simulation Time
     @Parameter(names="-simt",arity=1,description = "simulation time")
-    public static double sim_time = 6.0;
+    public static double sim_time = 6.5;
     
     /** Defines the progress of the chemical field flowing through the boundary on the x-axis. */
     int endpoint_x = 0;
@@ -178,7 +178,7 @@ public class BSimPhageField {
 		 * Create a new simulation object and set up simulation settings
 		 */
         final BSim sim = new BSim();
-        sim.setDt(0.05);				    // Set simulation timestep in time units (0.01)
+        sim.setDt(0.05);					// Set simulation timestep in time units (0.01)
         									// Let the time units be in hours
         sim.setSimulationTime(sim_time);    // Specified in time units, could also specify a termination condition elsewhere
         sim.setTimeFormat("0.00");		    // Time Format for display on images
@@ -645,7 +645,7 @@ public class BSimPhageField {
             /**
              * Export a csv file to save information about infection
              */
-            PhageFieldLogger infection_logger = new PhageFieldLogger(sim, filePath + "Infection_Simulation.csv", bac);
+            PhageFieldLogger infection_logger = new PhageFieldLogger(sim, filePath + "BSim_Simulation.csv", bac);
             infection_logger.setDt(export_time);			// Set export time step
             sim.addExporter(infection_logger);
 
