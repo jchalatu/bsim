@@ -18,7 +18,7 @@ public class PhageFieldLogger extends BSimLogger {
     @Override
     public void before() {
         super.before();
-        String CellProfilerFields = "ImageNumber,ObjectNumber,SimulationTime,Population,"
+        String CellProfilerFields = "ImageNumber,ObjectNumber,"
         		+ "AreaShape_MajorAxisLength,AreaShape_MinorAxisLength,AreaShape_Center_X,AreaShape_Center_Y,"
         		+ "AreaShape_Orientation,AreaShape_Area\n";
         write(CellProfilerFields);
@@ -31,8 +31,6 @@ public class PhageFieldLogger extends BSimLogger {
         	double area = (Math.PI * b.radius * b.radius + 2 * b.radius * b.L) * 13.89 * 13.89;
             buffer += ((int) (sim.getTimestep() * sim.getDt() / dt) + 1) + "," +
                     (b.id + 1) + "," + 
-            		(sim.getTimestep() * sim.getDt()) + "," +
-            		bac.size() + "," +
             		((b.L + 2 * b.radius) * BSimPhageField.pixel_to_um_ratio) + "," +
             		(2 * b.radius) * BSimPhageField.pixel_to_um_ratio + "," +
             		(b.position.x * BSimPhageField.pixel_to_um_ratio) + "," +
