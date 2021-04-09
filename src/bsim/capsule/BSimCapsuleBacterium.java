@@ -132,6 +132,15 @@ public class BSimCapsuleBacterium {
     // contact range extension (pilus length) and contact threshold for sticking force (side to side attraction)
     public double contact_range_extension = 0.25;
     public double contact_threshold = 4.0;
+	
+    /** Sets the value of the internal force. **/
+    public void setIntForce(double k_int) { k_int = k_int; }
+    /** Sets the value of the cell-cell collision force. **/
+    public void setCellForce(double k_cell) {this.k_cell = k_cell; }
+    /** Sets the sticking force. **/
+    public void setStickForce(double k_sticking) { this.k_sticking = k_sticking; }
+    /** Sets the range of the sticking force. **/
+    public void setStickingRange(double range_sticking) {this.range_sticking = range_sticking; }
     
     private double EPS = 1e-12; // machine precision value for use in checking whether quantity is zero
     // You can use it like this: value x is effectively zero if Math.abs(x)<EPS
