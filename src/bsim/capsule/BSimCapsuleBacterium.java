@@ -116,18 +116,18 @@ public class BSimCapsuleBacterium {
     }
 
     // Spring constants
-    public double k_int = 50.0;     		// internal force (5e-5 from Storck)
-    public double k_wall = 50.0 * 10;   			// overlap with wall
-    public double k_cell = 50.0 * 10;   			// overlapping cells (1e-4 from Storck)
-    public double k_filial = 5e-7;			// end to end attraction
-    public double k_longfilial = 5e-7;		// opposite end repulsion when filial is active
-    public double k_sticking = 0.01/*10.0*/;   		// side to side attraction
-    public double k_wallstick = 0.00;  		// cell to wall attraction (0 right now since walls are leaky)
+    public static double k_int = 50.0;     		// internal force (5e-5 from Storck)
+    public static double k_wall = 50.0 * 10;   			// overlap with wall
+    public static double k_cell = 50.0 * 10;   			// overlapping cells (1e-4 from Storck)
+    public static double k_filial = 5e-7;			// end to end attraction
+    public static double k_longfilial = 5e-7;		// opposite end repulsion when filial is active
+    public static double k_sticking = 0.01/*10.0*/;   		// side to side attraction
+    public static double k_wallstick = 0.00;  		// cell to wall attraction (0 right now since walls are leaky)
 
     // endpoint-to-endpoint ranges within which which these forces act, or (endpoint-to-wall distance)
-    public double range_filial = 0.01; 		// maximum range at which filial forces activate
-    public double range_sticking = 5.0/*0.6, 2.0*/; 	// max range ... sticking forces
-    public double range_wallstick = 0.25; 	// max range ... attractive wall forces
+    public static double range_filial = 0.01; 		// maximum range at which filial forces activate
+    public static double range_sticking = 5.0/*0.6, 2.0*/; 	// max range ... sticking forces
+    public static double range_wallstick = 0.25; 	// max range ... attractive wall forces
 
     // contact range extension (pilus length) and contact threshold for sticking force (side to side attraction)
     public double contact_range_extension = 0.25;
