@@ -17,12 +17,16 @@ public class Bacterium extends BSimCapsuleBacterium {
     private Bacterium parent;
     
 	/** Length threshold for asymmetric growth (um). */
-	final public double L_asym = 3.75;
-	
+	static double L_asym = 3.75;
 	/** Allows the cell to grow asymmetrically. */
-	double asymmetry = 0.1;
+	static double asymmetry = 0.1;
 	/** The amount of force added back to achieve symmetric growth. */
-	double sym_growth = 0.05;
+	static double sym_growth = 0.05;
+	
+	/** Scales randomVec during division **/
+	static double twist = 100;
+	/** Scales longVec during division **/
+	static double push = 0.05;
 
     //function you call when you want to make a new bacterium object
     public Bacterium(BSim sim, Vector3d px1, Vector3d px2){
@@ -35,6 +39,18 @@ public class Bacterium extends BSimCapsuleBacterium {
         children = new ArrayList<>();
         parent = null;
     }
+    
+    /** Sets the value for asymmetric growth threshold. **/
+    public void setLAsym(double length) {L_asym = length;}
+    /** Sets the value of asymmetry. **/
+    public void setAsym(double a) { asymmetry = a; }
+    /** Sets the value of symmetric growth. **/
+    public void setSym(double s) { sym_growth = s; }
+    
+    /** Sets the value of the twist during division. **/
+    public void setTwist(double t) {this.twist = t;}
+    /** Sets the value of the push during division. **/
+    public void setPush(double p) {this.push = p;}
     
 	@Override
     // Function which computes the internal spring force acting on the endpoints of the cell
@@ -78,6 +94,8 @@ public class Bacterium extends BSimCapsuleBacterium {
     // capsulebacterium wouldn't do.
     @Override
     public void action() { //runs at every time step
+    	//System.out.println("twist: " + twist);
+    	//System.out.println("push: " + push);
         super.action();
     }
 
@@ -99,7 +117,7 @@ public class Bacterium extends BSimCapsuleBacterium {
 	@Override
     // This function is called when the bacterium has passed its' division threshold and is ready to divide.
     public Bacterium divide() {
-        Vector3d randomVec = new Vector3d(rng.nextDouble()/100,rng.nextDouble()/100,rng.nextDouble()/100);
+        Vector3d randomVec = new Vector3d(rng.nextDouble()/twist,rng.nextDouble()/twist,rng.nextDouble()/twist);
         System.out.println("Bacterium " + this.id + " is dividing...");
 
         Vector3d u = new Vector3d(); 
@@ -120,7 +138,7 @@ public class Bacterium extends BSimCapsuleBacterium {
         x2_new.scaleAdd(L1/L_actual, u, this.x1);
         Vector3d longVec = new Vector3d();
         longVec.scaleAdd(-1,this.x2,this.x1); 			// Push along bacterium length
-        longVec.scale(0.05*rng.nextDouble()); 			// Push is applied to bacterium
+        longVec.scale(push*rng.nextDouble()); 			// Push is applied to bacterium
         
         // Impulse, not a force.
         longVec.add(randomVec);
@@ -149,5 +167,6 @@ public class Bacterium extends BSimCapsuleBacterium {
         System.out.println("Child ID id " + child.id);
         return child;
     }
+	
 
 }
