@@ -10,23 +10,27 @@ import java.util.List;
 /**
  */
 public class Bacterium extends BSimCapsuleBacterium {
+    public final long origin_id;
+    public final long parent_id;
+    public int lifetime;
 
-    // these fields are used to build a tree structure to keep track
-    // of lineage - Sohaib Nadeem
+    /** These fields are used to build a tree structure to keep track of lineage - Sohaib Nadeem */
     private List<Bacterium> children;
     private Bacterium parent;
-    
-	/** Length threshold for asymmetric growth (um). */
+
+    /** Scales randomVec during division **/
+    static double twist = 0.1;// 1 / 100
+    /** Scales longVec during division **/
+    static double push = 0.05;
+
+    /** Enables asymmetric growth. */
+    static boolean asymmetric_growth = false;
+    /** Length threshold for asymmetric growth (um). */
 	static double L_asym = 3.75;
 	/** Allows the cell to grow asymmetrically. */
 	static double asymmetry = 0.1;
 	/** The amount of force added back to achieve symmetric growth. */
-	static double sym_growth = 0.05;
-	
-	/** Scales randomVec during division **/
-	static double twist = 100;
-	/** Scales longVec during division **/
-	static double push = 0.05;
+	static double symmetry_adjustment = 0.05;
 
     //function you call when you want to make a new bacterium object
     public Bacterium(BSim sim, Vector3d px1, Vector3d px2){
@@ -34,6 +38,24 @@ public class Bacterium extends BSimCapsuleBacterium {
         // This is the purpose of super(). The function super() initializes this bacterium object by first
         // referring to it as a capsulebacterium.
         super(sim, px1, px2);
+        this.origin_id = id;
+        this.parent_id = -1;
+        lifetime = 0;
+
+        // initialize fields for lineage tree - Sohaib Nadeem
+        children = new ArrayList<>();
+        parent = null;
+    }
+
+    //function you call when you want to make a bacterium object that is a child of another
+    public Bacterium(BSim sim, Vector3d px1, Vector3d px2, long origin_id, long parent_id){
+        // "Bacterium" is a type of capsule bacterium, so we need to do all the things that a CapsuleBacterium does first.
+        // This is the purpose of super(). The function super() initializes this bacterium object by first
+        // referring to it as a capsulebacterium.
+        super(sim, px1, px2);
+        this.origin_id = origin_id;
+        this.parent_id = parent_id;
+        lifetime = 0;
 
         // initialize fields for lineage tree - Sohaib Nadeem
         children = new ArrayList<>();
@@ -45,7 +67,7 @@ public class Bacterium extends BSimCapsuleBacterium {
     /** Sets the value of asymmetry. **/
     public void setAsym(double a) { asymmetry = a; }
     /** Sets the value of symmetric growth. **/
-    public void setSym(double s) { sym_growth = s; }
+    public void setSym(double s) { symmetry_adjustment = s; }
     
     /** Sets the value of the twist during division. **/
     public void setTwist(double t) {this.twist = t;}
@@ -59,35 +81,38 @@ public class Bacterium extends BSimCapsuleBacterium {
     // Responsible for the growth of the bacteria
 	/** Updated to implement asymmetrical elongation. */
     public void computeSelfForce() {
-        // create new number representing strength of the internal force -> initially set to zero
-        double internalPotential = 0;
+        if (asymmetric_growth) {
+            // create new number representing strength of the internal force -> initially set to zero
+            double internalPotential = 0;
 
-        // vector from x2 to x1
-        Vector3d seg = new Vector3d();
-        seg.sub(x2, x1);
+            // vector from x2 to x1
+            Vector3d seg = new Vector3d();
+            seg.sub(x2, x1);
 
-        // checks whether there is a discrepancy between endpoint distance and "actual length"
-        // if there is, this means that the internal force is needed to pull the endpoints back into position
-        double lengthDiff = seg.length() - L;
-        seg.normalize();
+            // checks whether there is a discrepancy between endpoint distance and "actual length"
+            // if there is, this means that the internal force is needed to pull the endpoints back into position
+            double lengthDiff = seg.length() - L;
+            seg.normalize();
 
-        if(lengthDiff < 0) {
-            internalPotential = 0.5 * k_int * Math.pow(lengthDiff, 2);
+            if (lengthDiff < 0) {
+                internalPotential = 0.5 * k_int * Math.pow(lengthDiff, 2);
+            } else {
+                internalPotential = -0.5 * k_int * Math.pow(lengthDiff, 2);
+            }
+
+            // Cell gradually starts growing symmetrically after the length threshold is met
+            // and  as asym approaches 1.0
+            if (L >= L_asym && asymmetry <= 1.0) {
+                asymmetry += symmetry_adjustment * sim.getDt();
+            }
+
+            // Elongate asymmetrically until the length threshold is met
+            // Internal potential is doubled to account for the x1force
+            this.x1force.scaleAdd(-internalPotential * (2 - asymmetry), seg, this.x1force);
+            this.x2force.scaleAdd(internalPotential * asymmetry, seg, this.x2force);
+        } else {
+            super.computeSelfForce();
         }
-        else {
-            internalPotential = -0.5 * k_int * Math.pow(lengthDiff, 2);
-        }
-        
-        // Cell gradually starts growing symmetrically after the length threshold is met
-        // and  as asym approaches 1.0
-        if ( L >= L_asym && asymmetry <= 1.0 ) {
-        	asymmetry += sym_growth * sim.getDt();
-        }
-        
-        // Elongate asymmetrically until the length threshold is met
-        // Internal potential is doubled to account for the x1force
-        this.x1force.scaleAdd(-internalPotential * (2 - asymmetry), seg, this.x1force);
-        this.x2force.scaleAdd(internalPotential * asymmetry, seg, this.x2force);
     }
 
     // in case we want our bacteria to do anything special, we can add things to action() here that an ordinary
@@ -117,10 +142,11 @@ public class Bacterium extends BSimCapsuleBacterium {
 	@Override
     // This function is called when the bacterium has passed its' division threshold and is ready to divide.
     public Bacterium divide() {
-        Vector3d randomVec = new Vector3d(rng.nextDouble()/twist,rng.nextDouble()/twist,rng.nextDouble()/twist);
+        Vector3d randomVec = new Vector3d(rng.nextDouble(), rng.nextDouble(), rng.nextDouble());
+        randomVec.scale(twist);
         System.out.println("Bacterium " + this.id + " is dividing...");
 
-        Vector3d u = new Vector3d(); 
+        Vector3d u = new Vector3d();
         u.sub(this.x2, this.x1);
 
         // Decides where to split bacterium
@@ -152,21 +178,24 @@ public class Bacterium extends BSimCapsuleBacterium {
 
         // Set the child cell.
         // Creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
-        Bacterium child = new Bacterium(sim, x1_child, new Vector3d(this.x2));
-        												// Asymmetrical growth occurs at division node
-        this.initialise(L1, x2_new, this.x1);			// Swap x1 and x2 for the mother after division for asymmetrical elongation
+        Bacterium child = new Bacterium(sim, x1_child, new Vector3d(this.x2), this.origin_id, this.id);
+        this.lifetime = 0;
+        // this.initialise(L1, this.x1, x2_new); // for symmetric growth
+        // Asymmetrical growth occurs at division node
+        // so we need to swap x1 and x2 for the mother after division for asymmetrical elongation
+        // This does not affect symmetric growth
+        this.initialise(L1, x2_new, this.x1);
         child.L = L2;
-        
+
         // add child to list of children - Sohaib Nadeem
         addChild(child);
-                
+
         // Calculate angle between daughter cells at division - Sheng Fang
         angle_initial = coordinate(child);
 
         // Prints a line whenever a new bacterium is made
-        System.out.println("Child ID id " + child.id);
+        System.out.println("Child ID is " + child.id);
         return child;
     }
-	
 
 }

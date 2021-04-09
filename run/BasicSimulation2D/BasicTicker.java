@@ -156,5 +156,12 @@ public class BasicTicker extends BSimTicker {
             }
         }
 
+        startTimeAction = System.nanoTime();
+
+        endTimeAction = System.nanoTime();
+        if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
+            System.out.println("Switch took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
+        }
+
     }
 }

@@ -65,8 +65,7 @@ public class CellProfilerLogger extends BSimLogger {
                     (b.id + 1) + ",-";
 
             String TrackObjects_fields = str.repeat(4) + (b.origin_id + 1) + "," + str.repeat(2) +
-                    (image_number - 1) + "," + (b.lifetime == 0 ? b.parent_id + 1 : b.id + 1) + ",-,-" +
-                    b.lifetime + "," + b.parent_id + "," + b.id;
+                    (image_number - 1) + "," + (b.lifetime == 0 ? b.parent_id + 1 : b.id + 1) + ",-,-";
 
             buffer += AreaShape_fields + "," + other_fields2 + "," + TrackObjects_fields + "\n";
         }
