@@ -1,6 +1,5 @@
 package BasicSimulation2D;
 
-import PhysModBsim.Bacterium;
 import bsim.BSim;
 import bsim.BSimTicker;
 import bsim.capsule.BSimCapsuleBacterium;
@@ -14,35 +13,41 @@ import java.util.Random;
 public class BasicTicker extends BSimTicker {
 
     BSim sim;
-    final int LOG_INTERVAL; // logs data every LOG_INTERVAL timesteps
+    // logs data about time taken by ticker every LOG_INTERVAL timesteps
+    final int LOG_INTERVAL;
     public boolean WITH_GROWTH = true;
-
-    final ArrayList<Bacterium> bac = new ArrayList();
-    final ArrayList<BSimCapsuleBacterium> bacteriaAll = new ArrayList();
-    final ArrayList<Bacterium> bac_born = new ArrayList();
-    final ArrayList<Bacterium> bac_dead = new ArrayList();
-
-    // internal machinery - dont worry about this line
-    // some kind of initailaize of mover
-    final Mover mover;
-
-    // to be removed
     static Random bacRng;
     //growth rate standard deviation
-    public static double growth_stdv=0.2;
+    public final double growth_stdv;
     //growth rate mean
-    public static double growth_mean=2.1;
+    public final double growth_mean;
     //elongation threshold standard deviation
-    public static double length_stdv=0.1;
+    public final double length_stdv;
     //elongation threshold mean
-    public static double length_mean=7.0;
+    public final double length_mean;
 
-    public BasicTicker(BSim sim, int LOG_INTERVAL, Random bacRng) {
+    final ArrayList<Bacterium> bac;
+    final ArrayList<BSimCapsuleBacterium> bacteriaAll;
+    final ArrayList<Bacterium> bac_born;
+    final ArrayList<Bacterium> bac_dead;
+
+    // internal machinery - don't worry about this
+    final Mover mover;
+
+    public BasicTicker(BSim sim, ArrayList<Bacterium> bac, ArrayList<BSimCapsuleBacterium> bacteriaAll, int LOG_INTERVAL,
+                       Random bacRng, double growth_stdv, double growth_mean, double length_stdv, double length_mean) {
         this.sim = sim;
         this.LOG_INTERVAL = LOG_INTERVAL;
-        mover = new RelaxationMoverGrid(bacteriaAll, sim);
-
         this.bacRng = bacRng; //random number generator
+        this.growth_stdv = growth_stdv;
+        this.growth_mean = growth_mean;
+        this.length_stdv = length_stdv;
+        this.length_mean = length_mean;
+        this.bac = bac;
+        this.bacteriaAll = bacteriaAll;
+        bac_born = new ArrayList();
+        bac_dead = new ArrayList();
+        mover = new RelaxationMoverGrid(bacteriaAll, sim);
     }
 
     // This one is a bit long too. Let's break it up
@@ -55,6 +60,11 @@ public class BasicTicker extends BSimTicker {
     // 7. bacteria which are out of bounds are removed from the simulation
     @Override
     public void tick() {
+        // increase lifetimes of cells
+        for (Bacterium b : bac) {
+            b.lifetime++;
+        }
+
         // ********************************************** Action
         long startTimeAction = System.nanoTime(); //wall-clock time, for diagnosing timing
 
@@ -85,7 +95,7 @@ public class BasicTicker extends BSimTicker {
             startTimeAction = System.nanoTime(); //start action timer
 
             for (Bacterium b : bac) { //loop over bac array
-                //b.grow();
+                b.grow();
 
                 // Divide if grown past threshold
                 if (b.L >= b.L_th) {
@@ -144,13 +154,6 @@ public class BasicTicker extends BSimTicker {
             if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
                 System.out.println("Death and removal took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
             }
-        }
-
-        startTimeAction = System.nanoTime();
-
-        endTimeAction = System.nanoTime();
-        if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-            System.out.println("Switch took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
         }
 
     }

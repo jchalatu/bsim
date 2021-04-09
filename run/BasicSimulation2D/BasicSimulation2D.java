@@ -1,8 +1,5 @@
 package BasicSimulation2D;
 
-import PhysModBsim.Bacterium;
-import PhysModBsim.CellProfilerLogger;
-
 import bsim.BSim;
 import bsim.BSimTicker;
 import bsim.BSimUtils;
@@ -11,6 +8,7 @@ import bsim.capsule.Mover;
 import bsim.capsule.RelaxationMoverGrid;
 import bsim.draw.BSimDrawer;
 import bsim.draw.BSimP3DDrawer;
+import bsim.export.BSimExporter;
 import bsim.export.BSimLogger;
 import bsim.export.BSimPngExporter;
 import com.beust.jcommander.JCommander;
@@ -26,8 +24,14 @@ import java.text.DecimalFormatSymbols;
 import java.util.*;
 import java.util.List;
 
+
+// Winter 2021 Project
+// Growth experiments from Winter 2021
+
 public class BasicSimulation2D {
     // Sohaib Nadeem
+    // pixel to um scaling: the images are a bit more than 2000 pixels wide, while the simulation is rougly 200 micrometers
+    // so the conversion factor ends up being 13.89
     static final double pixel_to_um_ratio = 13.89;
     final int width_pixels = 400;
     final int height_pixels = 400;
@@ -93,7 +97,7 @@ public class BasicSimulation2D {
 
         // creates new simulation data object
         // intializing storage unit for simualation
-        PhysModBsim.NeighbourInteractions bsim_ex = new PhysModBsim.NeighbourInteractions();
+        BasicSimulation2D bsim_ex = new BasicSimulation2D();
 
         // starts up JCommander which allows you to read options from the command line more easily
         // command line stuff
@@ -103,9 +107,9 @@ public class BasicSimulation2D {
         bsim_ex.run();
     }
 
-    public static Bacterium createBacterium(BSim sim, Vector3d x1, Vector3d x2) {
+    public static Bacterium createBacterium(BSim sim, Vector3d x1, Vector3d x2, int origin) {
         // creates a new bacterium object whose endpoints correspond to the above data
-        Bacterium bacterium = new Bacterium(sim, x1, x2);
+        Bacterium bacterium = new Bacterium(sim, x1, x2, origin, -1);
 
         // determine the vector between the endpoints
         // if the data suggests that a bacterium is larger than L_max, that bacterium will instead
@@ -180,42 +184,38 @@ public class BasicSimulation2D {
         //specify output file path
         String systemPath = new File("").getAbsolutePath() + "\\SingleCellSims";
 
-        CellProfilerReader reader = new CellProfilerReader("C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\twocellssidebyside2-400by400.csv",
-                pixel_to_um_ratio, 1);
-        double [] cell_endpoints = reader.readcsv();
-        while(cell_endpoints != null) {
-            // initializes the endpoints of each bacterium from the array of endpoints
-            // z-dimension is a small number, randomly generated, not sure why.
-            Vector3d x1 = new Vector3d(cell_endpoints[0], cell_endpoints[1], 0.5);
-            Vector3d x2 = new Vector3d(cell_endpoints[2], cell_endpoints[3], 0.5);
-            // note that the endpoint positions are scaled by 13.89, since the images are a bit more than 2000 pixels wide
-            // while the simulation is rougly 200 micrometers. the conversion factor ends up being 13.89
-            //pixel to um scaling
-
-            Bacterium bac0 = createBacterium(sim, x1, x2);
-
+        //String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\twocellssidebyside2-400by400.csv";
+        String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\MyExpt_IdentifyPrimaryObjects.csv";
+        CellProfilerReader reader = new CellProfilerReader(initial_data_path, pixel_to_um_ratio, 1);
+        ArrayList<double[]> cell_endpoints = reader.readcsv();
+        for(int i = 0; i < cell_endpoints.size(); i++) {//double[] cell : cell_endpoints) {
+            double[] cell = cell_endpoints.get(i);
+            // initializes the endpoints of each bacterium from the array of endpoints; z-dimension is 0.5
+            // note that the endpoint positions are scaled by pixel_to_um_ratio,
+            Vector3d x1 = new Vector3d(cell[0], cell[1], 0.5);
+            Vector3d x2 = new Vector3d(cell[2], cell[3], 0.5);
+            Bacterium bac0 = createBacterium(sim, x1, x2, i);
             // adds the newly created bacterium to our lists for tracking purposes
-            bac.add(bac0); //for separate subpopulations
+            bac.add(bac0); // for separate subpopulations
             bacteriaAll.add(bac0);  // for all cells
-
-            cell_endpoints = reader.readcsv();
         }
 
         /*********************************************************
          * Set up the ticker
          */
         final int LOG_INTERVAL = 100; // logs data every 100 timesteps
-        BasicTicker ticker = new BasicTicker(sim, LOG_INTERVAL, bacRng);
+        BasicTicker ticker = new BasicTicker(sim, bac, bacteriaAll, LOG_INTERVAL, bacRng, growth_stdv, growth_mean,
+                length_stdv, length_mean);
         sim.setTicker(ticker);
 
         // the rest of the code is the drawer (makes simulation images) and data logger (makes csv files)
         /*********************************************************
          * Set up the drawer
          */
-        BasicDrawer drawer = new BasicDrawer(sim, width_pixels, height_pixels);
+        BasicDrawer drawer = new BasicDrawer(sim, width_pixels, height_pixels, pixel_to_um_ratio, bac);
         sim.setDrawer(drawer);
 
-        export = false;
+        export = true;
         if (export) {
             String simParameters = "" + BSimUtils.timeStamp() + "__dim_" + simX + "_" + simY + "_" + simZ
                     + "__ip_" + initialPopulation
@@ -242,8 +242,11 @@ public class BasicSimulation2D {
 
 
             // Export a csv file that matches CellProfiler's output
-            CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv", bacteriaAll);
-            cp_logger.setDt(export_time);            // Set export time step
+            CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv", bac, pixel_to_um_ratio);
+            // Set export time step, should be the same as sim.dt for the TrackObjects_fields to be correct
+            // This is because division events are identified by a lifetime of 0, and lifetime increments are based on on sim.dt
+            // (Lifetime could be converted to be in terms of cp_logger.dt if we use a multiple of sim.dt)
+            cp_logger.setDt(sim.getDt());
             sim.addExporter(cp_logger);
 
             sim.export();
@@ -260,6 +263,3 @@ public class BasicSimulation2D {
         System.out.println("Total simulation time: " + (simulationEndTime - simulationStartTime) / 1e9 + " sec.");
     }
 }
-
-// Fall 2020 Project
-// Growth experiments form Fall 2020

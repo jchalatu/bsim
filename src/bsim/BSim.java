@@ -121,8 +121,8 @@ public class BSim {
 
 		timestep = 0;
 		while(true) {
-			ticker.tick();	
 			timestep++;
+			ticker.tick();
 			frame.repaint();
 			// http://www.ryerson.ca/~dgrimsha/courses/cps840/repaint.html
 			try { Thread.sleep((long) (1000*dt)); } catch (InterruptedException e) {}
@@ -132,16 +132,21 @@ public class BSim {
 	/**
 	 * Runs and exports the simulation.
 	 */
-	public void export() {						
-		for(BSimExporter exporter : exporters) exporter.before();		
+	// Timesteps begin at 1 so that the number of timesteps is correct
+	// as well as the alignment of the timestep with the ticking
+	public void export() {
+		System.out.println(getFormattedTime());
+		for(BSimExporter exporter : exporters) exporter.before();
+		for(BSimExporter exporter : exporters)
+			if(timestep % timesteps(exporter.getDt()) == 0) exporter.during();
 
 		// Increment integer timesteps than adding to double time to avoid rouding issues
-		for(timestep = 0; timestep <= timesteps(simulationTime); timestep++) {			
+		for(timestep = 1; timestep <= timesteps(simulationTime); timestep++) {
 			ticker.tick();	
 			System.out.println(getFormattedTime());
 			for(BSimExporter exporter : exporters)
 				if(timestep % timesteps(exporter.getDt()) == 0) exporter.during();
-		}		
+		}
 
 		for(BSimExporter exporter : exporters) exporter.after();
 

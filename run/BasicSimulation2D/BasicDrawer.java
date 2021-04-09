@@ -1,7 +1,7 @@
 package BasicSimulation2D;
 
-import PhysModBsim.Bacterium;
 import bsim.BSim;
+import bsim.capsule.BSimCapsuleBacterium;
 import bsim.draw.BSimDrawer;
 import bsim.draw.BSimP3DDrawer;
 import processing.core.PConstants;
@@ -12,13 +12,16 @@ import java.util.ArrayList;
 
 public class BasicDrawer extends BSimP3DDrawer{
 
-    final ArrayList<Bacterium> bac = new ArrayList();
-    final double simX = 0.0;
-    final double simY = 0.0;
-    final double simZ = 0.0;
+    // Bacterium should be a sub-class of BSimCapsuleBacterium
+    final ArrayList<Bacterium> bac;
+    final double simX;
+    final double simY;
 
-    public BasicDrawer(BSim sim, int width_pixels, int height_pixels) {
+    public BasicDrawer(BSim sim, int width_pixels, int height_pixels, double pixel_to_um_ratio, ArrayList<Bacterium> bac_to_draw) {
         super(sim, width_pixels, height_pixels);
+        simX = width_pixels / pixel_to_um_ratio;
+        simY = height_pixels / pixel_to_um_ratio;
+        bac = bac_to_draw;
     }
 
     /**

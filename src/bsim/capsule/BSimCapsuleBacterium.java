@@ -83,6 +83,18 @@ public class BSimCapsuleBacterium {
 	/** Status of phage occupation within bacterium. */
 	private boolean infected = false;
 
+    // constructor for BSimCapsuleBacterium
+    public BSimCapsuleBacterium(BSim _sim, Vector3d _x1, Vector3d _x2) {
+        x1 = _x1;
+        x2 = _x2;
+        sim = _sim;
+        setBrownianForceMagnitude(); //currently unused
+
+        Vector3d u = new Vector3d();
+        u.sub(this.x2, this.x1);
+        this.position.scaleAdd(0.5, u, this.x1);
+    }
+
     // function to allow you to set individual growth rates
     public void setK_growth(double k_growth) {
         this.k_growth = k_growth;
@@ -963,18 +975,6 @@ public class BSimCapsuleBacterium {
         this.x2.scaleAdd(sim.getDt(), this.x2force, this.x2);
 
         this.setAllForcesZero();
-    }
-
-    // constructor for BSimCapsuleBacterium
-    public BSimCapsuleBacterium(BSim _sim, Vector3d _x1, Vector3d _x2) {
-        x1 = _x1;
-        x2 = _x2;
-        sim = _sim;
-        setBrownianForceMagnitude(); //currently unused
-
-        Vector3d u = new Vector3d();
-        u.sub(this.x2, this.x1);
-        this.position.scaleAdd(0.5, u, this.x1);
     }
 
     public void setBrownianForceMagnitude() {
