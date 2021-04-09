@@ -94,6 +94,37 @@ public class BSimPhageField {
     @Parameter(names="-simt",arity=1,description = "simulation time")
     public static double sim_time = 6.5;
     
+    // internal force
+    @Parameter(names="-k_int",arity=1,description = "internal force")
+    public static double k_int = 50.0;
+    // cell-cell collision force
+    @Parameter(names="-k_cell",arity=1,description = "cell-cell collision force")
+    public static double k_cell = 50.0;
+    // sticking force
+    @Parameter(names="-k_stick",arity=1,description = "side-to-side attraction")
+    public static double k_sticking = 10.0;
+    
+    // sticking range
+    @Parameter(names="-rng_stick",arity=1,description = "max range side-to-side attraction")
+    public static double range_sticking = 0.6;
+    
+    // twist
+    @Parameter(names="-twist",arity=1,description = "twist")
+    public static double twist = 100;
+    // push
+    @Parameter(names="-push",arity=1,description = "push")
+    public static double push = 0.05;
+    
+    // asymmetric growth threshold
+    @Parameter(names="-l_asym",arity=1,description = "asymmetric growth threshold")
+    public static double L_asym = 3.75;
+    // value of asymmetry
+    @Parameter(names="-asym",arity=1,description = "asymmetry")
+    public static double asymmetry = 0.1;
+    // symmetric growth
+    @Parameter(names="-sym",arity=1,description = "symmetric growth")
+    public static double sym_growth = 0.05;
+    
     /** Defines the progress of the chemical field flowing through the boundary on the x-axis. */
     int endpoint_x = 0;
 
@@ -151,6 +182,14 @@ public class BSimPhageField {
         
         double lengthThreshold = div_stdv * bacRng.nextGaussian() + div_mean;
         bacterium.setElongationThreshold(lengthThreshold);
+        
+        // Assigns the specified forces, range, and impulses
+        bacterium.setIntForce(k_int);
+        bacterium.setCellForce(k_cell);
+        bacterium.setStickForce(k_sticking);
+        bacterium.setStickingRange(range_sticking);
+        bacterium.setTwist(twist);
+        bacterium.setPush(push);
 
         return bacterium;
     }
