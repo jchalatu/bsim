@@ -98,8 +98,7 @@ public class PhageFieldBacterium extends Bacterium {
 			// Cell death
 			if ( lifeCount == lifeSpan / sim.getDt() ) {
 	    		setDying(true);						// Cell death begins
-	    		//elongation_rate = shrinkRate;
-	    		setK_growth(shrinkRate);		// Cell starts shrinking
+	    		setK_growth(shrinkRate);			// Cell starts shrinking
 	    		setProduction(false); 				// Cell stops producing phage
 			}
 			else {
