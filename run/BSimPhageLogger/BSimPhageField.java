@@ -1,26 +1,19 @@
 package BSimPhageLogger;
 
-import bsim.BSim;  
+import bsim.BSim;   
 
 import bsim.BSimChemicalField;
-import bsim.BSimTicker;
 import bsim.BSimUtils;
 import bsim.capsule.BSimCapsuleBacterium;
 import bsim.capsule.Mover;
 import bsim.capsule.RelaxationMoverGrid;
-import bsim.draw.BSimDrawer;
 import bsim.export.BSimLogger;
 import bsim.export.BSimPngExporter;
-import bsim.winter2021.P3DDrawer;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
-import processing.core.PConstants;
-import processing.core.PGraphics3D;
-
 import javax.vecmath.*;
-import java.awt.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.*;
@@ -38,14 +31,11 @@ import java.io.File;
  */
 public class BSimPhageField {
 	
-	/** Pixel to micrometer ratio. */
-	static final double pixel_to_um_ratio = 13.89;
-	
-    /** Whether to enable growth in the ticker etc. or not... */
-    private static final boolean WITH_GROWTH = true;
-    
-    /** Whether to flow phage in through the side of the boundary. */
-    private static final boolean FLOW_IN = false; 
+    static final double pixel_to_um_ratio = 13.89;
+    final int width_pixels = 400;
+    final int height_pixels = 400;
+    final double width_um = width_pixels / pixel_to_um_ratio; 	// should be kept as constants for cell prof.
+    final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
     
     // Boundaries
     // Boolean flag: specifies whether any walls are needed
@@ -57,9 +47,15 @@ public class BSimPhageField {
     @Parameter(names = "-export", description = "Enable export mode.")
     private boolean export = true;
     
+    @Parameter(names = "-grow", description = "Enable bacteria growth.")
+    private boolean WITH_GROWTH = true;
+    @Parameter(names = "-phage", description = "Enable phage.")
+    private boolean FLOW_IN = false;
+    
     // Simulation setup parameters. Set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
     public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {75.0, 50.0, 1.0} ));
+    //public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[]{width_um, height_um, 1.}));
 
     // Grid ->
     // 52x42 -> 546
@@ -124,9 +120,6 @@ public class BSimPhageField {
     // symmetric growth
     @Parameter(names="-sym",arity=1,description = "symmetric growth")
     public static double sym_growth = 0.05;
-    
-    /** Defines the progress of the chemical field flowing through the boundary on the x-axis. */
-    int endpoint_x = 0;
 
     /** Main Function. 
      * This is the very first function that runs in the simulation.
@@ -251,25 +244,6 @@ public class BSimPhageField {
 		final int field_box_num = 50;		// Number of boxes to represent the chemical field
 		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
 		
-		/*********************************************************
-		Initial conditions:
-		 	1) Initial phage distribution in the environment
-			2) Phage introduction rate from the boundary
-		 */
-		
-		Vector3d initial_phage_pos = new Vector3d(25, 30, 0);
-		final double initial_phage_num = 0;//1e7;   
-		
-		// Case 1
-		if ( !FLOW_IN ) {
-			field.addQuantity( initial_phage_pos, initial_phage_num * sim.getDt());	
-		}
-		else {
-			//sim.setLeaky(false, true, false, false, false, false);
-			sim.setLeaky(true, true, false, false, false, false);
-			sim.setLeakyRate(0, 0, 0, 0, 0, 0);
-		}
-		
         /*********************************************************
          * Create the bacteria
          */
@@ -313,250 +287,27 @@ public class BSimPhageField {
         /*********************************************************
          * Set up the ticker
          */
-        final int LOG_INTERVAL = 100; 				// Logs data every 100 timesteps (1)
-        
-        // This one is a bit long too. Let's break it up
-        // 1. Begins an "action" -> this represents one timestep
-        // 2. Tells each bacterium to perform their action() function
-        // 3. Updates each chemical field in the simulation
-        // 4. Bacteria are then told to grow()
-        // 5. bacteria which are longer than their threshold are told to divide()
-        // 6. forces are applied and bacteria move around
-        // 7. bacteria which are out of bounds are removed from the simulation
-        BSimTicker ticker = new BSimTicker() {
-            @Override
-            public void tick() {
-            	
-                /********************************************** Action */
-            	
-                long startTimeAction = System.nanoTime(); 	// Wall-clock time, for diagnosing timing
-
-                // Calculates and stores the midpoint of the cell.
-                // Bacteria does action at each time step
-                for(BSimCapsuleBacterium b : bacteriaAll) {
-                    b.action(); 							
-                }
-
-                // Outputs how long each step took, once every log interval.
-                long endTimeAction = System.nanoTime();
-                if((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                    System.out.println("Action update for " + bacteriaAll.size() + " bacteria took " + (endTimeAction - startTimeAction)/1e6 + " ms.");
-                }  
-
-                /********************************************** Chemical fields */
-                
-                startTimeAction = System.nanoTime();
-                
-                /** Allow the flow of phage through a boundary. */
-                final double phage_conc = 2e3;   
-                
-                final int VER1 = 1;
-                final int VER2 = 2;
-                int version = 1;
-                
-                // State enabled where phage flows in through a boundary
-                if ( FLOW_IN ) {
-                	if ( version == VER1 ) {
-                    	for ( int i = 0; i < field_box_num; i ++ ) {
-                    		field.addQuantity( 0, i, 0, phage_conc * sim.getDt() );
-                    	}
-                	}
-                	else if ( version == VER2 ) {
-                		final double conc = 1e2; 
-                    	if ( endpoint_x < field_box_num ) {
-                        	for ( int x = 0; x < endpoint_x; x ++ ) {
-                        		for ( int y = 0; y < field_box_num; y ++ ) {
-                        			field.addQuantity( x, y, 0, conc * sim.getDt() );
-                        		}
-                        	}
-                        	endpoint_x ++;
-                    	}
-                    	else {
-                    		endpoint_x = 0;
-                    	}
-                	}
-                }
-
-                // Update the phage field
-                field.update(); 
-
-                endTimeAction = System.nanoTime();
-                if((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                    System.out.println("Chemical field update took " + (endTimeAction - startTimeAction)/1e6 + " ms.");
-                }
-
-                /********************************************** Growth related activities if enabled. */
-                if (WITH_GROWTH) {
-
-                    // ********************************************** Growth and division
-                    startTimeAction = System.nanoTime(); 	// Start action timer
-
-                    for (PhageFieldBacterium b : bac) { 				// Loop over bac array
-                        b.grow();
-                        
-                        // Divide if grown past threshold
-                        if (b.L >= b.L_th) {
-                        	PhageFieldBacterium daughter = b.divide();
-                    		
-                        	// If the cell is infected, the daughter cell is also infected
-                        	if ( b.isInfected() ) {
-                        		daughter.setInfected(true);
-                        	}
-                        	
-                        	bac_born.add(daughter);  		// Add daughter to newborn class, 'mother' keeps her status
-                        }
-                    }
-                    
-                    bac.addAll(bac_born); 					// Adds all the newborn daughters
-                    bacteriaAll.addAll(bac_born); 			// Adds all the newborn daughters
-                    
-                    // Fixes the bug where daughter cells stop growing
-                    for ( PhageFieldBacterium b : bac_born ) {
-                    	
-                        // Assigns a growth rate and a division length to each bacterium according to a normal distribution
-                        double growthRate = el_stdv*bacRng.nextGaussian() + el_mean;
-                        b.setK_growth(growthRate);
-
-                        double lengthThreshold = div_stdv*bacRng.nextGaussian() + div_mean;
-                        b.setElongationThreshold(lengthThreshold);
-                    }
-                    
-                    bac_born.clear(); 						// Cleared for next time-step
-
-                    // Prints out information about bacteria when u want it to
-                    endTimeAction = System.nanoTime();
-                    if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                        System.out.println("Growth and division took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
-                    }
-                    
-                    /********************************************** Neighbor interactions */
-                    
-                    startTimeAction = System.nanoTime();
-
-                    mover.move();
-
-                    endTimeAction = System.nanoTime();
-                    if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                        System.out.println("Wall and neighbour interactions took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
-                    }
-
-                    /********************************************** Boundaries/removal */
-                    startTimeAction = System.nanoTime();
-                    
-                    // Removal
-                    for (PhageFieldBacterium b : bac) {
-                        // Kick out if past any boundary
-                    	// Bacteria out of bounds = dead
-                        if(b.position.x < 0 || b.position.x > sim.getBound().x || b.position.y < 0 || b.position.y > sim.getBound().y || b.position.z < 0 || b.position.z > sim.getBound().z){
-                            bac_dead.add(b);
-                        } 
-                        
-                        // Remove cell after it shrinks and becomes too small
-                        if ( b.L <= 1 ) {
-                        	bac_dead.add(b);
-                        }
-                        
-                    }
-                    bac.removeAll(bac_dead);
-                    bacteriaAll.removeAll(bac_dead);
-                    bac_dead.clear();
-
-                    endTimeAction = System.nanoTime();
-                    if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                        System.out.println("Death and removal took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
-                    }
-                }
-
-                startTimeAction = System.nanoTime();
-
-                endTimeAction = System.nanoTime();
-                if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                    System.out.println("Switch took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
-                }
-
-            }
-        };
-
+        final int LOG_INTERVAL = 100; 			// logs data every 100 timesteps
+        BasicTicker ticker = new BasicTicker(sim, bac, bacteriaAll, LOG_INTERVAL, bacRng, el_stdv, el_mean,
+                div_stdv, div_mean, field, field_box_num);
+        ticker.setGrowth(WITH_GROWTH);			// enables bacteria growth
+        ticker.setFlow(FLOW_IN);				// enables flow in of phage from boundary
         sim.setTicker(ticker);
-
+        
         /*********************************************************
          * Set up the drawer
          */
-        BSimDrawer drawer = new P3DDrawer(sim, 800, 600) {	//2752, 2208
-            /**
-             * Draw the default cuboid boundary of the simulation as a partially transparent box
-             * with a wireframe outline surrounding it.
-             */
-            @Override
-            public void boundaries() {
-                p3d.noFill();
-                p3d.stroke(128, 128, 255);
-                p3d.pushMatrix();
-                p3d.translate((float)boundCentre.x,(float)boundCentre.y,(float)boundCentre.z);
-                p3d.box((float)bound.x, (float)bound.y, (float)bound.z);
-                p3d.popMatrix();
-                p3d.noStroke();
-            }
-
-            @Override
-            public void draw(Graphics2D g) {
-                p3d.beginDraw();
-
-                if(!cameraIsInitialised){
-                    // camera(eyeX, eyeY, eyeZ, centerX, centerY, centerZ, upX, upY, upZ)
-                    p3d.camera((float)bound.x*0.5f, (float)bound.y*0.5f,
-                            // Set the Z offset to the largest of X/Y dimensions for a reasonable zoom-out distance:
-                            simX > simY ? (float)simX : (float)simY,
-                            (float)bound.x*0.5f, (float)bound.y*0.5f, 0,
-                            0,1,0);
-                    cameraIsInitialised = true;
-                }
-
-                p3d.textFont(font);
-                p3d.textMode(PConstants.SCREEN);
-
-                p3d.sphereDetail(10);
-                p3d.noStroke();
-                p3d.background(255, 255,255);
-
-                scene(p3d);
-                boundaries();
-                time();
-
-                p3d.endDraw();
-                g.drawImage(p3d.image, 0,0, null);
-            }
-
-            /**
-             * Draw the formatted simulation time to screen.
-             */
-            @Override
-            public void time() {
-                p3d.fill(0);
-                //p3d.text(sim.getFormattedTimeHours(), 50, 50);
-                p3d.text(sim.getFormattedTime(), 50, 50);
-            }
-
-            @Override
-            public void scene(PGraphics3D p3d) {
-                p3d.ambientLight(128, 128, 128);
-                p3d.directionalLight(128, 128, 128, 1, 1, -1);
-                
-				// Draw the phage field
-                draw2D(field, Color.BLUE, (float)(255/c));	
-				
-				// Draw the infected bacteria in red and the non-infected bacteria in green
-				for(PhageFieldBacterium b : bac) {
-					draw(b, b.isInfected() ? Color.RED : Color.GREEN);
-				}		
-
-            }
-        };
+        //BasicDrawer drawer = new BasicDrawer(sim, width_pixels, height_pixels, pixel_to_um_ratio, bac,
+        //		field, c);
+        BasicDrawer drawer = new BasicDrawer(sim, 800, 600, pixel_to_um_ratio, bac,
+        		field, c);
         sim.setDrawer(drawer);
         
+        /*********************************************************
+         * Export data
+         */
         export = true;
         if(export) {
-        	/*
             String simParameters = "" + BSimUtils.timeStamp() + "__dim_" + simX + "_" + simY + "_" + simZ
                     + "__ip_" + initialPopulation
                     + "__pr_" + populationRatio;
@@ -565,9 +316,7 @@ public class BSimPhageField {
                 simParameters += "__fixedBounds";
             } else {
                 simParameters += "__leakyBounds";
-            }*/ // Changed folder name for pipeline
-        	
-        	String simParameters = "params_" + el_mean + "_" + el_stdv + "_" + div_mean + "_" + div_stdv;
+            }
         			
             String filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
 //            String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
@@ -684,9 +433,9 @@ public class BSimPhageField {
             /**
              * Export a csv file to save information about infection
              */
-            PhageFieldLogger infection_logger = new PhageFieldLogger(sim, filePath + "BSim_Simulation.csv", bac);
-            infection_logger.setDt(export_time);			// Set export time step
-            sim.addExporter(infection_logger);
+            PhageFieldLogger logger = new PhageFieldLogger(sim, filePath + "BSim_Simulation.csv", bac, pixel_to_um_ratio);
+            logger.setDt(export_time);			// Set export time step
+            sim.addExporter(logger);
 
             sim.export();
 
