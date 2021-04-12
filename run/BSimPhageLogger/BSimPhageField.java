@@ -32,8 +32,8 @@ import java.io.File;
 public class BSimPhageField {
 	
     static final double pixel_to_um_ratio = 13.89;
-    final int width_pixels = 400;
-    final int height_pixels = 400;
+    final int width_pixels = 800;
+    final int height_pixels = 600;
     final double width_um = width_pixels / pixel_to_um_ratio; 	// should be kept as constants for cell prof.
     final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
     
@@ -54,8 +54,8 @@ public class BSimPhageField {
     
     // Simulation setup parameters. Set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
-    public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {75.0, 50.0, 1.0} ));
-    //public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[]{width_um, height_um, 1.}));
+    //public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {75.0, 50.0, 1.0} ));
+    public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[]{width_um, height_um, 1.}));
 
     // Grid ->
     // 52x42 -> 546
@@ -75,9 +75,9 @@ public class BSimPhageField {
     
     //growth rate standard deviation
     @Parameter(names="-el_stdv",arity=1,description = "elongation rate standard deviation")
-    public static double el_stdv = 0.277;//0.2;//0.02;		
+    public static double el_stdv = 0.277;	
     @Parameter(names="-el_mean",arity=1,description = "elongation rate mean")
-    public static double el_mean = 1.23;//2.1;//0.5;
+    public static double el_mean = 1.23;
 
     //elongation threshold standard deviation
     @Parameter(names="-div_stdv",arity=1,description = "elongation threshold standard deviation")
@@ -89,6 +89,10 @@ public class BSimPhageField {
     // Simulation Time
     @Parameter(names="-simt",arity=1,description = "simulation time")
     public static double sim_time = 6.5;
+    @Parameter(names="-simdt",arity=1,description = "simulation time step")
+    public static double sim_dt = 0.05;
+    @Parameter(names="-export_time",arity=1,description = "export time")
+    public static double export_time = 0.5;// Previously was 10, and simulation time was 100
     
     // internal force
     @Parameter(names="-k_int",arity=1,description = "internal force")
@@ -144,15 +148,25 @@ public class BSimPhageField {
         bacRng.setSeed(50); 				// Initializes random number generator
         
         // Random initial positions 
-        Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x, //x/10
+        Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x, 
 				Math.random()*sim.getBound().y, 
 				Math.random()*sim.getBound().z);
-		
-        Vector3d pos2 = new Vector3d(pos1.x + 1, pos1.y + 1, pos1.z);
-        /*
-        Vector3d pos2 = new Vector3d(Math.random()*sim.getBound().x, 
-				Math.random()*sim.getBound().y, 
-				Math.random()*sim.getBound().z);*/
+	
+        double r = BSimCapsuleBacterium.L_th * Math.sqrt(Math.random());
+        double theta = Math.random() * 2 * Math.PI;
+        Vector3d pos2 = new Vector3d(pos1.x + r * Math.cos(theta), 
+				pos1.y + r * Math.sin(theta), 
+				pos1.z);
+        
+        // Check if the random coordinates are within bounds
+        while(pos2.x >= sim.getBound().x || pos2.x <= 0 || pos2.y >= sim.getBound().y || pos2.y <= 0) {
+        	pos1 = new Vector3d(Math.random()*sim.getBound().x, 
+    				Math.random()*sim.getBound().y, 
+    				Math.random()*sim.getBound().z);
+        	pos2 = new Vector3d(pos1.x + r * Math.cos(theta), 
+    				pos1.y + r * Math.sin(theta), 
+    				pos1.z);
+        }
         
         // Creates a new bacterium object whose endpoints correspond to the above data
         PhageFieldBacterium bacterium = new PhageFieldBacterium(sim, field, pos1, pos2);
@@ -183,6 +197,10 @@ public class BSimPhageField {
         bacterium.setStickingRange(range_sticking);
         bacterium.setTwist(twist);
         bacterium.setPush(push);
+        
+        bacterium.setLAsym(L_asym);
+        bacterium.setAsym(asymmetry);
+        bacterium.setSym(sym_growth);
 
         return bacterium;
     }
@@ -210,7 +228,7 @@ public class BSimPhageField {
 		 * Create a new simulation object and set up simulation settings
 		 */
         final BSim sim = new BSim();
-        sim.setDt(0.05);					// Set simulation timestep in time units (0.01)
+        sim.setDt(sim_dt);					// Set simulation timestep in time units 
         									// Let the time units be in hours
         sim.setSimulationTime(sim_time);    // Specified in time units, could also specify a termination condition elsewhere
         sim.setTimeFormat("0.00");		    // Time Format for display on images
@@ -297,9 +315,7 @@ public class BSimPhageField {
         /*********************************************************
          * Set up the drawer
          */
-        //BasicDrawer drawer = new BasicDrawer(sim, width_pixels, height_pixels, pixel_to_um_ratio, bac,
-        //		field, c);
-        BasicDrawer drawer = new BasicDrawer(sim, 800, 600, pixel_to_um_ratio, bac,
+        BasicDrawer drawer = new BasicDrawer(sim, width_pixels, height_pixels, pixel_to_um_ratio, bac,
         		field, c);
         sim.setDrawer(drawer);
         
@@ -321,7 +337,6 @@ public class BSimPhageField {
             String filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
 //            String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
 
-            double export_time = 0.5; // Previously was 10, and simulation time was 100
             /*********************************************************
              * Various properties of the simulation, for future reference.
              */
