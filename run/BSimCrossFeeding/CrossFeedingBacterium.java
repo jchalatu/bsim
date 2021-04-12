@@ -92,8 +92,6 @@ public class CrossFeedingBacterium extends Bacterium {
         	
     		// Cell growth rate is dependent on consumption 
             double growth = (mu_max * sim.getDt()) * ( consumptionNum / ( K_s + consumptionNum ) );
-        	//double growth = (mu_max) * ( consumptionNum / ( K_s + consumptionNum ) );
-            
             total_bio_mass += growth;
             
             // Yield conversion
@@ -101,7 +99,7 @@ public class CrossFeedingBacterium extends Bacterium {
             setK_growth(growth_rate);
             
             //System.out.println(total_bio_mass);
-            System.out.println(consumptionNum + " " + growth_rate);
+            //System.out.println(consumptionNum + " " + growth_rate);
         }
 		
 		// Production of amino acid is dependent on nutrient field ( in access )
