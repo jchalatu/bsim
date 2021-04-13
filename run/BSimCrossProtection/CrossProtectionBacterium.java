@@ -16,6 +16,11 @@ import java.util.*;
  * will start to shrink and die (turns red in the simulation). 
  */
 public class CrossProtectionBacterium extends Bacterium {
+	
+    /** Scales randomVec during division **/
+    static double twist;
+    /** Scales longVec during division **/
+    static double push;
 
 	/** Chemical field representing the antibiotic the bacteria is resistant to. */
 	protected BSimChemicalField resistant_field;
@@ -122,9 +127,14 @@ public class CrossProtectionBacterium extends Bacterium {
     /** Sets the elongation stdv. **/
     public void set_elStdv(double el_stdv) { this.initial_el_stdv = el_stdv; }
     
+    /** Sets the value of the twist during division. **/
+    public void setTwist(double t) {twist = t;}
+    /** Sets the value of the push during division. **/
+    public void setPush(double p) {push = p;}
+    
     // This function is called when the bacterium has passed its' division threshold and is ready to divide.
     public CrossProtectionBacterium divide() {
-        Vector3d randomVec = new Vector3d(rng.nextDouble()/100,rng.nextDouble()/100,rng.nextDouble()/100);
+        Vector3d randomVec = new Vector3d(rng.nextDouble()/twist,rng.nextDouble()/twist,rng.nextDouble()/twist);
         System.out.println("Bacterium " + this.id + " is dividing...");
 
         Vector3d u = new Vector3d(); 
@@ -145,7 +155,7 @@ public class CrossProtectionBacterium extends Bacterium {
         x2_new.scaleAdd(L1/L_actual, u, this.x1);
         Vector3d longVec = new Vector3d();
         longVec.scaleAdd(-1,this.x2,this.x1); 			// Push along bacterium length
-        longVec.scale(0.05*rng.nextDouble()); 			// Push is applied to bacterium
+        longVec.scale(push*rng.nextDouble()); 			// Push is applied to bacterium
         
         // Impulse, not a force.
         longVec.add(randomVec);
