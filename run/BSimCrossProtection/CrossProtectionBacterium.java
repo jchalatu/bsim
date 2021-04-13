@@ -8,6 +8,12 @@ import javax.vecmath.Vector3d;
 
 import java.util.*;
 /**
+ * This class represents a bacteria for a cross-protection simulation. 
+ * The growth rate of the bacteria depends on it's initial growth rate and the surrounding
+ * concentration of antibiotics. 
+ * If a cell is surrounded by an antibiotic it isn't resistant to, the growth rate will decrease. 
+ * If the concentration of antibiotic around a bacteria is greater than a certain threshold, the cell 
+ * will start to shrink and die (turns red in the simulation). 
  */
 public class CrossProtectionBacterium extends Bacterium {
 
@@ -17,15 +23,17 @@ public class CrossProtectionBacterium extends Bacterium {
 	protected BSimChemicalField antibiotic_field;
 	
 	/** Initial growth rate of the bacteria. */
-	final private double initial_growth_mean = 0.2;
-	final private double initial_growth_stdv = 0.05;
-	final private double initial_growth_rate;
+	public static double initial_el_mean = 0.2;
+	public static double initial_el_stdv = 0.05;
+	final private double initial_el_rate;
 	
+	/** Rate at which the bacteria shrinks when dying. **/
 	final private double shrink_stdv = 0.0434;			
 	final private double shrink_mean = -0.117;
+	final private double shrink_rate;
 	
 	/** Scales the growth rate of the bacteria. */
-	final private double scale_1 = 2;//1;
+	final private double scale_1 = 1;//2;
 	/** Scales the concentration for the growth rate of the bacteria. */
 	final private double scale_2 = 0.1;
 	
@@ -53,15 +61,19 @@ public class CrossProtectionBacterium extends Bacterium {
         this.resistant_field = resistant;
         
         growth_threshold = 1e2;
-        conc_threshold = 3e2;//4e2;	
+        conc_threshold = 3e2;	
         production = true;
         aboveConcThreshold = false;
-        enzymeNum = 3e3;//2e3;//1e3;
+        enzymeNum = 3e3;
         
     	Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
-        initial_growth_rate = initial_growth_stdv * bacRng.nextGaussian() + initial_growth_mean;
-        setK_growth(initial_growth_rate);
+        
+        // Calculate the initial elongation rate 
+        initial_el_rate = initial_el_stdv * bacRng.nextGaussian() + initial_el_mean;
+        setK_growth(initial_el_rate);
+        // Calculate the rate at which the bacteria will shrink
+        shrink_rate = shrink_stdv * bacRng.nextGaussian() + shrink_mean;
     }
 
     // In case we want our bacteria to do anything special, we can add things to action() here that an ordinary
@@ -76,35 +88,20 @@ public class CrossProtectionBacterium extends Bacterium {
         	
         	// Bacteria starts shrinking 
         	Random bacRng = new Random();	
-	        //setK_growth( shrink_stdv * bacRng.nextGaussian() + shrink_mean );
-        	setK_growth(0.0);
+	        setK_growth( shrink_rate );
+        	//setK_growth(0.0);		// stops growing
+	        //setProduction(false); 	// stops producing enzymes when dying
         }
-        	
+        // If toxin levels are below the threshold, 
+        // cell growth rate is lowered depending on surrounding antibiotic concentration 
+        // (values and scaling are arbitrary for now)
         else {
         	aboveConcThreshold = false;
-        	
-            // Cell growth rate is lowered depending on antibiotic concentration (Arbitrary for now)
             if ( antibiotic_field.getConc(position) > growth_threshold ) {
-            	setK_growth( initial_growth_rate * scale_1/(scale_1 + antibiotic_field.getConc(position) * scale_2 * sim.getDt()));
+            	setK_growth( initial_el_rate * scale_1/(scale_1 + antibiotic_field.getConc(position) * scale_2 * sim.getDt()));
             } 
         }
         
-        /*
-        // Cell growth rate is lowered depending on antibiotic concentration
-        if ( antibiotic_field.getConc(position) > growth_threshold 
-        		&& antibiotic_field.getConc(position) <= getDeathThreshold() ) {		
-			setK_growth( initial_growth_rate * scale_1/(scale_1 + antibiotic_field.getConc(position) * scale_2 * sim.getDt()));
-		} // Arbitrary for now
-        
-        // Cell death
-        else if ( antibiotic_field.getConc(position) > getDeathThreshold() ) {
-        	aboveConcThreshold = true;
-        	//setProduction(false); 					// Cell stops producing enzymes when dying
-        	
-        	Random bacRng = new Random();	
-	        setK_growth( shrink_stdv * bacRng.nextGaussian() + shrink_mean );
-        }*/
-		
 		// Production of enzymes to decay the antibiotic the bacteris is resistant to
 		if ( isProducing() ) {						// Steady production of enzymes (enzyme/hr)
 			resistant_field.addQuantity(position, -enzymeNum * sim.getDt() );	
@@ -120,6 +117,10 @@ public class CrossProtectionBacterium extends Bacterium {
     public void setProduction( boolean production) { this.production = production; }
     /** Returns the flag that indicates toxin levels above threshold. */
     public boolean isAboveThreshold() { return aboveConcThreshold; }
+    /** Sets the elongation mean. **/
+    public void set_elMean(double el_mean) { this.initial_el_mean = el_mean; }
+    /** Sets the elongation stdv. **/
+    public void set_elStdv(double el_stdv) { this.initial_el_stdv = el_stdv; }
     
     // This function is called when the bacterium has passed its' division threshold and is ready to divide.
     public CrossProtectionBacterium divide() {
