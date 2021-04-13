@@ -322,7 +322,6 @@ public class BSimPhageField {
         /*********************************************************
          * Export data
          */
-        export = true;
         if(export) {
             String simParameters = "" + BSimUtils.timeStamp() + "__dim_" + simX + "_" + simY + "_" + simZ
                     + "__ip_" + initialPopulation
