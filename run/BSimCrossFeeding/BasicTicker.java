@@ -1,12 +1,11 @@
 package BSimCrossFeeding;
 
-import bsim.BSim;
+import bsim.BSim; 
 import bsim.BSimChemicalField;
 import bsim.BSimTicker;
 import bsim.capsule.BSimCapsuleBacterium;
 import bsim.capsule.Mover;
 import bsim.capsule.RelaxationMoverGrid;
-import com.beust.jcommander.Parameter;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -16,7 +15,7 @@ public class BasicTicker extends BSimTicker {
     BSim sim;
     // logs data about time taken by ticker every LOG_INTERVAL timesteps
     final int LOG_INTERVAL;
-    public boolean WITH_GROWTH = true;
+    public static boolean WITH_GROWTH;
     static Random bacRng;
     //growth rate standard deviation
     public final double growth_stdv;
@@ -64,6 +63,9 @@ public class BasicTicker extends BSimTicker {
         BasicTicker.amino_acid_A = amino_acid_A;
         BasicTicker.amino_acid_B = amino_acid_B;
     }
+    
+    /** Sets the flag for growth. **/
+    public void setGrowth(boolean b) { WITH_GROWTH = b; }
     
     /** Function for bacteria growth activities. */
     public void growBacteria( ArrayList<CrossFeedingBacterium> bac, ArrayList<CrossFeedingBacterium> bacBorn ) {
