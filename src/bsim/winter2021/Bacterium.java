@@ -19,7 +19,7 @@ public class Bacterium extends BSimCapsuleBacterium {
     private Bacterium parent;
 
     /** Scales randomVec during division **/
-    static double twist = 0.1;// 1 / 100
+    static double twist = 100;
     /** Scales longVec during division **/
     static double push = 0.05;
 
