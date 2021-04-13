@@ -22,7 +22,8 @@ import java.io.File;
 /**
  * 
  * This class simulates cross feeding.
- * Two populations of bacteria will produce amino acids for the other population to consume and grow 
+ * Two populations of bacteria will produce amino acids for the other population to consume and grow.
+ * The growth rate of bacteria depends on the rate of amino acid consumption. 
  *
  */
 public class BSimCrossFeeding {
@@ -41,7 +42,7 @@ public class BSimCrossFeeding {
     // @parameter means an optional user-specified value in the command line
     // export mode means output appears
     @Parameter(names = "-export", description = "Enable export mode.")
-    private boolean export = true;
+    private boolean export = false;
     
     @Parameter(names = "-grow", description = "Enable bacteria growth.")
     private boolean WITH_GROWTH = true;
@@ -60,7 +61,7 @@ public class BSimCrossFeeding {
     // Density (cell number)
     // optional call to a default initial set of cells
     @Parameter(names = "-pop", arity = 1, description = "Initial seed population (n_total).")
-    public int initialPopulation = 1;
+    public int initialPopulation = 2;
 
     // A:R ratio
     // for default set of cells, set ratio of two subpopulations
@@ -261,14 +262,13 @@ public class BSimCrossFeeding {
 		/*********************************************************
 		 * Set up the antibiotic field
 		 */
-		final double c = 7e2;        				// Molecules; Decrease this to see lower concentration
+		final double c = 7e2;        				// Decrease this to see lower concentrations
 		final double decayRate = 0.0;				// Decay rate of antibiotics
 		final double diffusivity = 2.0;				// (Microns)^2/sec
 		
 		final int field_box_num = 50;				// Number of boxes to represent the chemical field
 		final BSimChemicalField amino_acid_A = new BSimChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
 		final BSimChemicalField amino_acid_B = new BSimChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
-		//80, 80, 1
 		
         /*********************************************************
          * Create the bacteria
@@ -279,17 +279,19 @@ public class BSimCrossFeeding {
 
         // Gets the location of the file that is currently running
         // Specify output file path
-        String systemPath = new File("").getAbsolutePath()+"\\SingleCellSims";
-
-		// Create two sub-populations of bacteria objects randomly in space
-        CrossFeedingBacterium bacteriumA = createBacterium( sim, amino_acid_A, amino_acid_B );
-        CrossFeedingBacterium bacteriumB = createBacterium( sim, amino_acid_B, amino_acid_A );
-		
-		// Adds the newly created bacterium to our lists for tracking purposes
-		bacA.add(bacteriumA); 				// For separate subpopulations
-		bacB.add(bacteriumB); 				// For separate subpopulations
-		bacteriaAll.add(bacteriumA);		// For all cells	
-		bacteriaAll.add(bacteriumB);		// For all cells	
+        String systemPath = new File("").getAbsolutePath()+"\\CrossFeeding";
+        
+        while ( bacteriaAll.size() < initialPopulation ) {
+    		// Create two sub-populations of bacteria objects randomly in space
+            CrossFeedingBacterium bacteriumA = createBacterium( sim, amino_acid_A, amino_acid_B );
+            CrossFeedingBacterium bacteriumB = createBacterium( sim, amino_acid_B, amino_acid_A );
+    		
+    		// Adds the newly created bacterium to our lists for tracking purposes
+    		bacA.add(bacteriumA); 				// For separate subpopulations
+    		bacB.add(bacteriumB); 				// For separate subpopulations
+    		bacteriaAll.add(bacteriumA);		// For all cells	
+    		bacteriaAll.add(bacteriumB);		// For all cells
+        }
 
         // Internal machinery - dont worry about this line
         // Some kind of initialize of mover
@@ -302,6 +304,7 @@ public class BSimCrossFeeding {
         final int LOG_INTERVAL = 100; // logs data every 100 timesteps
         BasicTicker ticker = new BasicTicker(sim, bacA, bacB, bacteriaAll, LOG_INTERVAL, bacRng, 
         		el_stdv, el_mean, div_stdv, div_mean, amino_acid_A, amino_acid_B);
+        ticker.setGrowth(WITH_GROWTH);
         sim.setTicker(ticker);
 
         /*********************************************************
@@ -314,7 +317,6 @@ public class BSimCrossFeeding {
         /*********************************************************
          * Export data
          */
-        export = false;
         if(export) {
             String simParameters = "" + BSimUtils.timeStamp() + "__dim_" + simX + "_" + simY + "_" + simZ
                     + "__ip_" + initialPopulation
