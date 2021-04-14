@@ -10,6 +10,7 @@ import java.util.*;
 /**
  */
 public class PhageFieldBacterium extends Bacterium {
+    public int lifetime;
 	
     /** Scales randomVec during division **/
     static double twist;
@@ -56,7 +57,7 @@ public class PhageFieldBacterium extends Bacterium {
 	// Function you call when you want to make a new bacterium object
     public PhageFieldBacterium(BSim sim, BSimChemicalField field, Vector3d px1, Vector3d px2) {
 		super(sim, px1, px2);
-		
+		lifetime = 0;
         this.field = field;						
         phageNum = 1000;				// 1000 phages/hr
         productionDelay = 2; 			// hrs 
@@ -204,6 +205,7 @@ public class PhageFieldBacterium extends Bacterium {
         // Set the child cell.
         // Creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
         PhageFieldBacterium child = new PhageFieldBacterium(sim, field, x1_child, new Vector3d(this.x2));
+        this.lifetime = 0;
         												// Asymmetrical growth occurs at division node
         this.initialise(L1, x2_new, this.x1);			// Swap x1 and x2 for the mother after division for asymmetrical elongation
         child.L = L2;
