@@ -1,14 +1,10 @@
 package BSimAsymGrowth;
 
-import bsim.BSim;
-import bsim.BSimChemicalField;
-import bsim.BSimTicker;
+import bsim.BSim; 
 import bsim.BSimUtils;
 import bsim.capsule.BSimCapsuleBacterium;
 import bsim.capsule.Mover;
 import bsim.capsule.RelaxationMoverGrid;
-import bsim.draw.BSimDrawer;
-import bsim.draw.BSimP3DDrawer;
 import bsim.export.BSimLogger;
 import bsim.export.BSimPngExporter;
 import bsim.winter2021.Bacterium;
@@ -16,25 +12,23 @@ import bsim.winter2021.Bacterium;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
-import processing.core.PConstants;
-import processing.core.PGraphics3D;
-
 import javax.vecmath.*;
-import java.awt.*;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.*;
 import java.util.List;
 import java.io.File;
-
+ 
 /**
- * This class simulates the growth of cells asymmetrically
+ * This class simulates the growth of cells asymmetrically. The nodes of the bacteria 
+ * grow at different rates until a certain length threshold where they grow symmetrically again. 
  */
 public class BSimAsymGrowth {
+    static final double pixel_to_um_ratio = 13.89;
+    final int width_pixels = 800;
+    final int height_pixels = 500;
+    final double width_um = width_pixels / pixel_to_um_ratio; // should be kept as constants for cell prof.
+    final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
 	
     /** Whether to enable growth in the ticker etc. or not... */
     private static final boolean WITH_GROWTH = true;
@@ -54,9 +48,8 @@ public class BSimAsymGrowth {
     
     // Simulation setup parameters. Set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
-    public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {75.0, 50.0, 1.0} ));
-    // 198.0, 159.0, 1.0	// onecell.csv
-    
+    public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[]{width_um, height_um, 1.}));
+
     // Grid ->
     // 52x42 -> 546
     // 100x86 -> 2150
@@ -66,26 +59,64 @@ public class BSimAsymGrowth {
     // Density (cell number)
     // optional call to a default initial set of cells
     @Parameter(names = "-pop", arity = 1, description = "Initial seed population (n_total).")
-    public int initialPopulation = 2;
+    public int initialPopulation = 1;
 
     // A:R ratio
     // for default set of cells, set ratio of two subpopulations
     @Parameter(names = "-ratio", arity = 1, description = "Ratio of initial populations (proportion of activators).")
     public double populationRatio = 0.0;
-
+    
     //growth rate standard deviation
-    @Parameter(names="-gr_stdv",arity=1,description = "growth rate standard deviation")
-    public static double growth_stdv = 0.02;		
-    //growth rate mean
-    @Parameter(names="-gr_mean",arity=1,description = "growth rate mean")
-    public static double growth_mean = 0.5;
+    @Parameter(names="-el_stdv",arity=1,description = "elongation rate standard deviation")
+    public static double el_stdv = 0.277;	
+    @Parameter(names="-el_mean",arity=1,description = "elongation rate mean")
+    public static double el_mean = 1.23;
 
     //elongation threshold standard deviation
-    @Parameter(names="-len_stdv",arity=1,description = "elongation threshold standard deviation")
-    public static double length_stdv = 0.1;
+    @Parameter(names="-div_stdv",arity=1,description = "elongation threshold standard deviation")
+    public static double div_stdv = 0.1;
     //elongation threshold mean
-    @Parameter(names="-len_mean",arity=1,description = "elongation threshold mean")
-    public static double length_mean = 7.0;
+    @Parameter(names="-div_mean",arity=1,description = "elongation threshold mean")
+    public static double div_mean = 7.0;
+    
+    // Simulation Time
+    @Parameter(names="-simt",arity=1,description = "simulation time")
+    public static double sim_time = 6.5;
+    @Parameter(names="-simdt",arity=1,description = "simulation time step")
+    public static double sim_dt = 0.05;
+    @Parameter(names="-export_time",arity=1,description = "export time")
+    public static double export_time = 0.5;// Previously was 10, and simulation time was 100
+    
+    // internal force
+    @Parameter(names="-k_int",arity=1,description = "internal force")
+    public static double k_int = 50.0;
+    // cell-cell collision force
+    @Parameter(names="-k_cell",arity=1,description = "cell-cell collision force")
+    public static double k_cell = 50.0;
+    // sticking force
+    @Parameter(names="-k_stick",arity=1,description = "side-to-side attraction")
+    public static double k_sticking = 10.0;
+    
+    // sticking range
+    @Parameter(names="-rng_stick",arity=1,description = "max range side-to-side attraction")
+    public static double range_sticking = 0.6;
+    
+    // twist
+    @Parameter(names="-twist",arity=1,description = "twist")
+    public static double twist = 0.1;
+    // push
+    @Parameter(names="-push",arity=1,description = "push")
+    public static double push = 0.05;
+    
+    // asymmetric growth threshold
+    @Parameter(names="-l_asym",arity=1,description = "asymmetric growth threshold")
+    public static double L_asym = 3.75;
+    // value of asymmetry
+    @Parameter(names="-asym",arity=1,description = "asymmetry")
+    public static double asymmetry = 0.1;
+    // symmetric growth
+    @Parameter(names="-sym",arity=1,description = "symmetric growth")
+    public static double sym_growth = 0.05;
 
     /** Main Function. 
      * This is the very first function that runs in the simulation.
@@ -109,14 +140,26 @@ public class BSimAsymGrowth {
     	Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
         
-        // Changed position to random 
+        // Random initial positions 
         Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x, 
 				Math.random()*sim.getBound().y, 
 				Math.random()*sim.getBound().z);
+	
+        double r = BSimCapsuleBacterium.L_th * Math.sqrt(Math.random());
+        double theta = Math.random() * 2 * Math.PI;
+        Vector3d pos2 = new Vector3d(pos1.x + r * Math.cos(theta), 
+				pos1.y + r * Math.sin(theta), 
+				pos1.z);
         
-        Vector3d pos2 = new Vector3d(Math.random()*sim.getBound().x, 
-				Math.random()*sim.getBound().y, 
-				Math.random()*sim.getBound().z);
+        // Check if the random coordinates are within bounds
+        while(pos2.x >= sim.getBound().x || pos2.x <= 0 || pos2.y >= sim.getBound().y || pos2.y <= 0) {
+        	pos1 = new Vector3d(Math.random()*sim.getBound().x, 
+    				Math.random()*sim.getBound().y, 
+    				Math.random()*sim.getBound().z);
+        	pos2 = new Vector3d(pos1.x + r * Math.cos(theta), 
+    				pos1.y + r * Math.sin(theta), 
+    				pos1.z);
+        }
         
         // Creates a new bacterium object whose endpoints correspond to the above data
         Bacterium bacterium = new Bacterium(sim, pos1, pos2);
@@ -132,13 +175,25 @@ public class BSimAsymGrowth {
         if (length < bacterium.L_max) {
             bacterium.initialise(length, pos1, pos2); 	// Redundant to record length, but ok.
         }
-
+        
         // Assigns a growth rate and a division length to bacterium according to a normal distribution
-        double growthRate = growth_stdv * bacRng.nextGaussian() + growth_mean;
+        double growthRate = el_stdv * bacRng.nextGaussian() + el_mean;
         bacterium.setK_growth(growthRate);
         
-        double lengthThreshold = length_stdv * bacRng.nextGaussian() + length_mean;
+        double lengthThreshold = div_stdv * bacRng.nextGaussian() + div_mean;
         bacterium.setElongationThreshold(lengthThreshold);
+        
+        // Assigns the specified forces, range, and impulses
+        bacterium.setIntForce(k_int);
+        bacterium.setCellForce(k_cell);
+        bacterium.setStickForce(k_sticking);
+        bacterium.setStickingRange(range_sticking);
+        bacterium.setTwist(twist);
+        bacterium.setPush(push);
+        
+        bacterium.setLAsym(L_asym);
+        bacterium.setAsym(asymmetry);
+        bacterium.setSym(sym_growth);
 
         return bacterium;
     }
@@ -211,67 +266,6 @@ public class BSimAsymGrowth {
         // Specify output file path
         String systemPath = new File("").getAbsolutePath()+"\\SingleCellSims";
         
-        /** Empty list which will later contain the endpoint of rectangle positions 4 = x1,y1,x2,y2. */
-        /*double[][] initEndpoints = new double[4][];
-
-        // Creates a new csvreader object which can extract data from .csv files
-        BufferedReader csvReader = null;
-        try {
-            // try reading the initial position file
-            csvReader = new BufferedReader(new FileReader("C:\\Users\\sheng\\Documents\\CO-OP_W2021\\Research_Assistant\\Catie_BSim\\onecell.csv"));
-        } catch (FileNotFoundException e) {
-            // If that doesn't work, print out an error
-            e.printStackTrace();
-        }
- 
-        // If loading the content works, try reading the data
-        // Updated: Previous version gave Exception in thread "main" java.lang.NumberFormatException: empty String
-        try {
-        	
-            // Goes through each row of the excel sheet and pulls out the initial positions
-            String row = csvReader.readLine();
-            int i = 0;
-            while (row != null) {
-            	
-                // Row.split takes a single line of the excel sheet and chops it up into the columns
-                // mapToDouble takes the values in those columns and converts them to Java double data format
-                // toArray converts the data into an array
-            	
-            	// In case of empty string, first check that the row is not blank
-            	if (!row.isBlank()) {
-            		initEndpoints[i] = Arrays.stream(row.split(",")).mapToDouble(Double::parseDouble).toArray();
-            		
-            		i ++;
-            	}
-            	row = csvReader.readLine();
-            }
-            csvReader.close(); 				// Close the file once all data is extracted    
-        }
-        
-        catch(IOException e) {
-            e.printStackTrace(); 			// If there is an error, this will just print out the message
-        }
-
-        // Now that the data is extracted, we can create the bacterium objects
-       for(int j = 0; j < initEndpoints[0].length; j++){
-        	
-            // Initializes the endpoints of each bacterium from the array of endpoints
-            // z-dimension is a small number, randomly generated, not sure why.
-            Vector3d x1 = new Vector3d(initEndpoints[0][j]/13.89,initEndpoints[1][j]/13.89,bacRng.nextDouble()*0.1*(simZ - 0.1)/2.0);
-            Vector3d x2 = new Vector3d(initEndpoints[2][j]/13.89,initEndpoints[3][j]/13.89,bacRng.nextDouble()*0.1*(simZ - 0.1)/2.0);
-            // Note: the endpoint positions are scaled by 13.89, since the images are a bit more than 2000 pixels wide
-            // While the simulation is rougly 200 micrometers. the conversion factor ends up being 13.89
-            // Pixel to um scaling
-
-            // Creates a new bacterium object whose endpoints correspond to the above data
-            Bacterium bac0 = createBacterium(sim, field, x1, x2);
-
-            // Adds the newly created bacterium to our lists for tracking purposes
-            bac.add(bac0); 			// For separate subpopulations
-            bacteriaAll.add(bac0);  // For all cells
-        	
-        } */
-        
         /** Creating random bacterium objects to demonstrate phage field */
 
 		// Create new phage sensing bacteria objects randomly in space
@@ -293,208 +287,93 @@ public class BSimAsymGrowth {
         // Some kind of initialize of mover
         final Mover mover;
         mover = new RelaxationMoverGrid(bacteriaAll, sim);
-
+        
         /*********************************************************
          * Set up the ticker
          */
-        final int LOG_INTERVAL = 100; 				// Logs data every 100 timesteps (1)
-        
-        // This one is a bit long too. Let's break it up
-        // 1. Begins an "action" -> this represents one timestep
-        // 2. Tells each bacterium to perform their action() function
-        // 3. Updates each chemical field in the simulation
-        // 4. Bacteria are then told to grow()
-        // 5. bacteria which are longer than their threshold are told to divide()
-        // 6. forces are applied and bacteria move around
-        // 7. bacteria which are out of bounds are removed from the simulation
-        BSimTicker ticker = new BSimTicker() {
-            @Override
-            public void tick() {
-            	
-                /********************************************** Action */
-            	
-                long startTimeAction = System.nanoTime(); 	// Wall-clock time, for diagnosing timing
-
-                // Calculates and stores the midpoint of the cell.
-                // Bacteria does action at each time step
-                for(BSimCapsuleBacterium b : bacteriaAll) {
-                    b.action(); 							
-                }
-
-                // Outputs how long each step took, once every log interval.
-                long endTimeAction = System.nanoTime();
-                if((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                    //System.out.println("Action update for " + bacteriaAll.size() + " bacteria took " + (endTimeAction - startTimeAction)/1e6 + " ms.");
-                }  
-
-                /********************************************** Chemical fields */
-                
-                startTimeAction = System.nanoTime();
-
-                endTimeAction = System.nanoTime();
-                if((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                    //System.out.println("Chemical field update took " + (endTimeAction - startTimeAction)/1e6 + " ms.");
-                }
-
-                /********************************************** Growth related activities if enabled. */
-                if (WITH_GROWTH) {
-
-                    // ********************************************** Growth and division
-                    startTimeAction = System.nanoTime(); 	// Start action timer
-
-                    for (Bacterium b : bac) { 				// Loop over bac array
-                        b.grow();
-
-                        // Divide if grown past threshold
-                        if (b.L >= b.L_th) {
-                        	Bacterium daughter = b.divide();
-                        	bac_born.add(daughter);  		// Add daughter to newborn class, 'mother' keeps her status
-                        }
-                    }
-                    
-                    bac.addAll(bac_born); 					// Adds all the newborn daughters
-                    bacteriaAll.addAll(bac_born); 			// Adds all the newborn daughters
-                    
-                    // Fixes the bug where daughter cells stop growing
-                    for ( Bacterium b : bac_born ) {
-                    	
-                        // Assigns a growth rate and a division length to each bacterium according to a normal distribution
-                        double growthRate = growth_stdv*bacRng.nextGaussian() + growth_mean;
-                        b.setK_growth(growthRate);
-
-                        double lengthThreshold = length_stdv*bacRng.nextGaussian()+length_mean;
-                        b.setElongationThreshold(lengthThreshold);
-                    }
-                    
-                    bac_born.clear(); 						// Cleared for next time-step
-
-                    // Prints out information about bacteria when u want it to
-                    endTimeAction = System.nanoTime();
-                    if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                        //System.out.println("Growth and division took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
-                    }
-                    
-                    /********************************************** Neighbor interactions */
-                    
-                    startTimeAction = System.nanoTime();
-
-                    mover.move();
-
-                    endTimeAction = System.nanoTime();
-                    if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                        //System.out.println("Wall and neighbour interactions took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
-                    }
-
-                    /********************************************** Boundaries/removal */
-                    startTimeAction = System.nanoTime();
-                    
-                    // Removal
-                    for (Bacterium b : bac) {
-                        // Kick out if past any boundary
-                    	// Bacteria out of bounds = dead
-                        if(b.position.x < 0 || b.position.x > sim.getBound().x || b.position.y < 0 || b.position.y > sim.getBound().y || b.position.z < 0 || b.position.z > sim.getBound().z){
-                            bac_dead.add(b);
-                        } 
-                        
-                        // Remove cell after it shrinks and becomes too small
-                        if ( b.L <= 1 ) {
-                        	bac_dead.add(b);
-                        }
-                        
-                    }
-                    bac.removeAll(bac_dead);
-                    bacteriaAll.removeAll(bac_dead);
-                    bac_dead.clear();
-
-                    endTimeAction = System.nanoTime();
-                    if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                        //System.out.println("Death and removal took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
-                    }
-                }
-
-                startTimeAction = System.nanoTime();
-
-                endTimeAction = System.nanoTime();
-                if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                    //System.out.println("Switch took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
-                }
-
-            }
-        };
-
+        final int LOG_INTERVAL = 100; // logs data every 100 timesteps
+        BasicTicker ticker = new BasicTicker(sim, bac, bacteriaAll, LOG_INTERVAL, bacRng, el_stdv, el_mean,
+                div_stdv, div_mean);
+        ticker.setGrowth(WITH_GROWTH);			// enables bacteria growth
         sim.setTicker(ticker);
-
+        
         /*********************************************************
          * Set up the drawer
          */
-        BSimDrawer drawer = new BSimP3DDrawer(sim, 800, 600) {	
-            /**
-             * Draw the default cuboid boundary of the simulation as a partially transparent box
-             * with a wireframe outline surrounding it.
-             */
-            @Override
-            public void boundaries() {
-                p3d.noFill();
-                p3d.stroke(128, 128, 255);
-                p3d.pushMatrix();
-                p3d.translate((float)boundCentre.x,(float)boundCentre.y,(float)boundCentre.z);
-                p3d.box((float)bound.x, (float)bound.y, (float)bound.z);
-                p3d.popMatrix();
-                p3d.noStroke();
-            }
-
-            @Override
-            public void draw(Graphics2D g) {
-                p3d.beginDraw();
-
-                if(!cameraIsInitialised){
-                    // camera(eyeX, eyeY, eyeZ, centerX, centerY, centerZ, upX, upY, upZ)
-                    p3d.camera((float)bound.x*0.5f, (float)bound.y*0.5f,
-                            // Set the Z offset to the largest of X/Y dimensions for a reasonable zoom-out distance:
-                            simX > simY ? (float)simX : (float)simY,
-                            (float)bound.x*0.5f, (float)bound.y*0.5f, 0,
-                            0,1,0);
-                    cameraIsInitialised = true;
-                }
-
-                p3d.textFont(font);
-                p3d.textMode(PConstants.SCREEN);
-
-                p3d.sphereDetail(10);
-                p3d.noStroke();
-                p3d.background(255, 255,255);
-
-                scene(p3d);
-                boundaries();
-                time();
-
-                p3d.endDraw();
-                g.drawImage(p3d.image, 0,0, null);
-            }
-
-            /**
-             * Draw the formatted simulation time to screen.
-             */
-            @Override
-            public void time() {
-                p3d.fill(0);
-                //p3d.text(sim.getFormattedTimeHours(), 50, 50);
-                p3d.text(sim.getFormattedTime(), 50, 50);
-            }
-
-            @Override
-            public void scene(PGraphics3D p3d) {
-                p3d.ambientLight(128, 128, 128);
-                p3d.directionalLight(128, 128, 128, 1, 1, -1);
-				
-				// Draw the infected bacteria in red and the non-infected bacteria in green
-				for(Bacterium b : bac) {
-					draw(b, Color.GREEN);
-				}		
-
-            }
-        };
+        BasicDrawer drawer = new BasicDrawer(sim, width_pixels, height_pixels, pixel_to_um_ratio, bac);
         sim.setDrawer(drawer);
+
+//        /*********************************************************
+//         * Set up the drawer
+//         */
+//        BSimDrawer drawer = new BSimP3DDrawer(sim, 800, 600) {	
+//            /**
+//             * Draw the default cuboid boundary of the simulation as a partially transparent box
+//             * with a wireframe outline surrounding it.
+//             */
+//            @Override
+//            public void boundaries() {
+//                p3d.noFill();
+//                p3d.stroke(128, 128, 255);
+//                p3d.pushMatrix();
+//                p3d.translate((float)boundCentre.x,(float)boundCentre.y,(float)boundCentre.z);
+//                p3d.box((float)bound.x, (float)bound.y, (float)bound.z);
+//                p3d.popMatrix();
+//                p3d.noStroke();
+//            }
+//
+//            @Override
+//            public void draw(Graphics2D g) {
+//                p3d.beginDraw();
+//
+//                if(!cameraIsInitialised){
+//                    // camera(eyeX, eyeY, eyeZ, centerX, centerY, centerZ, upX, upY, upZ)
+//                    p3d.camera((float)bound.x*0.5f, (float)bound.y*0.5f,
+//                            // Set the Z offset to the largest of X/Y dimensions for a reasonable zoom-out distance:
+//                            simX > simY ? (float)simX : (float)simY,
+//                            (float)bound.x*0.5f, (float)bound.y*0.5f, 0,
+//                            0,1,0);
+//                    cameraIsInitialised = true;
+//                }
+//
+//                p3d.textFont(font);
+//                p3d.textMode(PConstants.SCREEN);
+//
+//                p3d.sphereDetail(10);
+//                p3d.noStroke();
+//                p3d.background(255, 255,255);
+//
+//                scene(p3d);
+//                boundaries();
+//                time();
+//
+//                p3d.endDraw();
+//                g.drawImage(p3d.image, 0,0, null);
+//            }
+//
+//            /**
+//             * Draw the formatted simulation time to screen.
+//             */
+//            @Override
+//            public void time() {
+//                p3d.fill(0);
+//                //p3d.text(sim.getFormattedTimeHours(), 50, 50);
+//                p3d.text(sim.getFormattedTime(), 50, 50);
+//            }
+//
+//            @Override
+//            public void scene(PGraphics3D p3d) {
+//                p3d.ambientLight(128, 128, 128);
+//                p3d.directionalLight(128, 128, 128, 1, 1, -1);
+//				
+//				// Draw the infected bacteria in red and the non-infected bacteria in green
+//				for(Bacterium b : bac) {
+//					draw(b, Color.GREEN);
+//				}		
+//
+//            }
+//        };
+//        sim.setDrawer(drawer);
         
         export = false;
         if(export) {
