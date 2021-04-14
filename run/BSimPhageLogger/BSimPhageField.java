@@ -22,7 +22,7 @@ import java.io.File;
 
 /**
  * 
- * This class tests the functionality of the phage field.
+ * This class represents an environment with phage.
  * A number of BSimBacterium bacteria are set up to swim around in a phage field.
  * If the density of phage around a bacteria is above a certain threshold, the bacteria
  * will become infected.
@@ -110,7 +110,7 @@ public class BSimPhageField {
     
     // twist
     @Parameter(names="-twist",arity=1,description = "twist")
-    public static double twist = 100;
+    public static double twist = 0.1;
     // push
     @Parameter(names="-push",arity=1,description = "push")
     public static double push = 0.05;
