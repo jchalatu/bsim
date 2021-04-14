@@ -1,6 +1,6 @@
 package BSimCrossFeeding;
 
-import bsim.BSim; 
+import bsim.BSim;  
 import bsim.BSimChemicalField;
 import bsim.BSimTicker;
 import bsim.capsule.BSimCapsuleBacterium;
@@ -129,6 +129,13 @@ public class BasicTicker extends BSimTicker {
     // 7. bacteria which are out of bounds are removed from the simulation
     @Override
     public void tick() {
+        // increase lifetimes of cells
+        for (CrossFeedingBacterium b : bacA) {
+            b.lifetime++;
+        }
+        for (CrossFeedingBacterium b : bacB) {
+            b.lifetime++;
+        }
     	
         /********************************************** Action */
     	
