@@ -10,13 +10,6 @@ import java.util.*;
 /**
  */
 public class PhageFieldBacterium extends Bacterium {
-    public int lifetime;
-	
-    /** Scales randomVec during division **/
-    static double twist;
-    /** Scales longVec during division **/
-    static double push;
-	
 	/** Chemical field of the simulation. */
 	protected BSimChemicalField field;
 	
@@ -57,7 +50,7 @@ public class PhageFieldBacterium extends Bacterium {
 	// Function you call when you want to make a new bacterium object
     public PhageFieldBacterium(BSim sim, BSimChemicalField field, Vector3d px1, Vector3d px2) {
 		super(sim, px1, px2);
-		lifetime = 0;
+
         this.field = field;						
         phageNum = 1000;				// 1000 phages/hr
         productionDelay = 2; 			// hrs 
@@ -76,7 +69,31 @@ public class PhageFieldBacterium extends Bacterium {
         // Calculated once
         infectedGrowthRate = inf_growth_stdv * bacRng.nextGaussian() + inf_growth_mean;
         shrinkRate = shrink_stdv * bacRng.nextGaussian() + shrink_mean;
-	}	
+	}
+
+    // Function you call when you want to make a bacterium object that is a child of another
+    public PhageFieldBacterium(BSim sim, BSimChemicalField field, Vector3d px1, Vector3d px2, long origin_id, long parent_id) {
+        super(sim, px1, px2, origin_id, parent_id);
+
+        this.field = field;
+        phageNum = 1000;				// 1000 phages/hr
+        productionDelay = 2; 			// hrs
+        lifeSpan = 20;					// hrs
+        threshold = 1e2;
+
+        pDelayCount = 0;
+        lifeCount = 0;
+
+        infected = false;
+        production = false;
+        isDying = false;
+
+        Random bacRng = new Random(); 		// Random number generator
+
+        // Calculated once
+        infectedGrowthRate = inf_growth_stdv * bacRng.nextGaussian() + inf_growth_mean;
+        shrinkRate = shrink_stdv * bacRng.nextGaussian() + shrink_mean;
+    }
 
     // In case we want our bacteria to do anything special, we can add things to action() here that an ordinary
     // capsulebacterium wouldn't do.
@@ -152,11 +169,6 @@ public class PhageFieldBacterium extends Bacterium {
     /** Sets the time of infection. */
     public void setInfectionTime( double t ) {infection_time = t;}
     
-    /** Sets the value of the twist during division. **/
-    public void setTwist(double t) {twist = t;}
-    /** Sets the value of the push during division. **/
-    public void setPush(double p) {push = p;}
-    
     // Allows us to change growth rate mechanics for individual cells
     @Override
     public void setK_growth(double k_growth) {
@@ -169,7 +181,8 @@ public class PhageFieldBacterium extends Bacterium {
 	@Override
     // This function is called when the bacterium has passed its' division threshold and is ready to divide.
     public PhageFieldBacterium divide() {
-        Vector3d randomVec = new Vector3d(rng.nextDouble()/twist,rng.nextDouble()/twist,rng.nextDouble()/twist);
+        Vector3d randomVec = new Vector3d(rng.nextDouble(), rng.nextDouble(), rng.nextDouble());
+        randomVec.scale(twist);
         System.out.println("Bacterium " + this.id + " is dividing...");
 
         Vector3d u = new Vector3d(); 
@@ -204,20 +217,24 @@ public class PhageFieldBacterium extends Bacterium {
 
         // Set the child cell.
         // Creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
-        PhageFieldBacterium child = new PhageFieldBacterium(sim, field, x1_child, new Vector3d(this.x2));
+        PhageFieldBacterium child = new PhageFieldBacterium(sim, field, x1_child, new Vector3d(this.x2), this.origin_id, this.id);
+        this.parent_id = this.id;
         this.lifetime = 0;
-        												// Asymmetrical growth occurs at division node
-        this.initialise(L1, x2_new, this.x1);			// Swap x1 and x2 for the mother after division for asymmetrical elongation
+        // this.initialise(L1, this.x1, x2_new); // for symmetric growth
+        // Asymmetrical growth occurs at division node
+        // so we need to swap x1 and x2 for the mother after division for asymmetrical elongation
+        // This does not affect symmetric growth
+        this.initialise(L1, x2_new, this.x1);
         child.L = L2;
-        
+
         // add child to list of children - Sohaib Nadeem
         addChild(child);
-                
-        // Calculate angle between daughter cells at division - Sheng Fang
+
+        // Calculate angle between daughter cells at division
         angle_initial = coordinate(child);
 
         // Prints a line whenever a new bacterium is made
-        System.out.println("Child ID id " + child.id);
+        System.out.println("Child ID is " + child.id);
         return child;
     }
 

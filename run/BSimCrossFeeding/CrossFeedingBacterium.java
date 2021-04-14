@@ -18,13 +18,6 @@ import java.lang.Math;
 /**
  */
 public class CrossFeedingBacterium extends Bacterium {
-	public int lifetime;
-	
-    /** Scales randomVec during division **/
-    static double twist;
-    /** Scales longVec during division **/
-    static double push;
-	
 	/** Chemical field representing the amino acid the bacteria produces. */
 	protected BSimChemicalField production_field;
 	/** Chemical field representing the antibiotic the bacteria consumes. */
@@ -63,8 +56,6 @@ public class CrossFeedingBacterium extends Bacterium {
         // referring to it as a capsulebacterium.
         super(sim, px1, px2);
         
-        lifetime = 0;
-        
         this.production_field = production_field;	
         this.consumption_field = consumption_field;
         
@@ -74,6 +65,28 @@ public class CrossFeedingBacterium extends Bacterium {
         consumptionMax = 1e3;
         
     	Random bacRng = new Random(); 		// Random number generator
+        bacRng.setSeed(50); 				// Initializes random number generator
+        initial_growth_rate = initial_growth_stdv * bacRng.nextGaussian() + initial_growth_mean;
+        setK_growth(initial_growth_rate);
+    }
+
+    /** Function you call when you want to make a bacterium object that is a child of another. */
+    public CrossFeedingBacterium(BSim sim, BSimChemicalField production_field, BSimChemicalField consumption_field,
+                                 Vector3d px1, Vector3d px2, long origin_id, long parent_id){
+        // "Bacterium" is a type of capsule bacterium, so we need to do all the things that a CapsuleBacterium does first.
+        // This is the purpose of super(). The function super() initializes this bacterium object by first
+        // referring to it as a capsulebacterium.
+        super(sim, px1, px2, origin_id, parent_id);
+
+        this.production_field = production_field;
+        this.consumption_field = consumption_field;
+
+        production = true;
+        productionNum = 1e3;
+        consumptionRate = 1.0;//0.8;
+        consumptionMax = 1e3;
+
+        Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
         initial_growth_rate = initial_growth_stdv * bacRng.nextGaussian() + initial_growth_mean;
         setK_growth(initial_growth_rate);
@@ -121,15 +134,11 @@ public class CrossFeedingBacterium extends Bacterium {
     public boolean isProducing() {return this.production;}
     /** Sets the flag for the internal amino acid production of a bacterium. */
     public void setProduction( boolean production) {this.production = production;}
-    
-    /** Sets the value of the twist during division. **/
-    public void setTwist(double t) {twist = t;}
-    /** Sets the value of the push during division. **/
-    public void setPush(double p) {push = p;}
 
     // This function is called when the bacterium has passed its' division threshold and is ready to divide.
     public CrossFeedingBacterium divide() {
-        Vector3d randomVec = new Vector3d(rng.nextDouble()/twist,rng.nextDouble()/twist,rng.nextDouble()/twist);
+        Vector3d randomVec = new Vector3d(rng.nextDouble(), rng.nextDouble(), rng.nextDouble());
+        randomVec.scale(twist);
         System.out.println("Bacterium " + this.id + " is dividing...");
 
         Vector3d u = new Vector3d(); 
@@ -164,12 +173,16 @@ public class CrossFeedingBacterium extends Bacterium {
 
         // Set the child cell.
         // Creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
-        CrossFeedingBacterium child = new CrossFeedingBacterium(sim, production_field, consumption_field, x1_child, new Vector3d(this.x2));
-        lifetime = 0;
-														// Asymmetrical growth occurs at division node
-        this.initialise(L1, x2_new, this.x1);			// Swap x1 and x2 for the mother after division for asymmetrical elongation
-		child.L = L2;
-        
+        CrossFeedingBacterium child = new CrossFeedingBacterium(sim, production_field, consumption_field, x1_child, new Vector3d(this.x2), this.origin_id, this.id);
+        this.parent_id = this.id;
+        this.lifetime = 0;
+        // this.initialise(L1, this.x1, x2_new); // for symmetric growth
+        // Asymmetrical growth occurs at division node
+        // so we need to swap x1 and x2 for the mother after division for asymmetrical elongation
+        // This does not affect symmetric growth
+        this.initialise(L1, x2_new, this.x1);
+        child.L = L2;
+
         // add child to list of children - Sohaib Nadeem
         addChild(child);
                 
@@ -177,7 +190,7 @@ public class CrossFeedingBacterium extends Bacterium {
         angle_initial = coordinate(child);
 
         // Prints a line whenever a new bacterium is made
-        System.out.println("Child ID id " + child.id);
+        System.out.println("Child ID is " + child.id);
         return child;
     }
 

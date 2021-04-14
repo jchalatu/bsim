@@ -16,13 +16,6 @@ import java.util.*;
  * will start to shrink and die (turns red in the simulation). 
  */
 public class CrossProtectionBacterium extends Bacterium {
-	public int lifetime;
-	
-    /** Scales randomVec during division **/
-    static double twist;
-    /** Scales longVec during division **/
-    static double push;
-
 	/** Chemical field representing the antibiotic the bacteria is resistant to. */
 	protected BSimChemicalField resistant_field;
 	/** Chemical field representing the antibiotic the bacteria is not resistant to. */
@@ -63,8 +56,6 @@ public class CrossProtectionBacterium extends Bacterium {
         // referring to it as a capsulebacterium.
         super(sim, px1, px2);
         
-        lifetime = 0;
-        
         this.antibiotic_field = antibiotic;	
         this.resistant_field = resistant;
         
@@ -78,6 +69,33 @@ public class CrossProtectionBacterium extends Bacterium {
         bacRng.setSeed(50); 				// Initializes random number generator
         
         // Calculate the initial elongation rate 
+        initial_el_rate = initial_el_stdv * bacRng.nextGaussian() + initial_el_mean;
+        setK_growth(initial_el_rate);
+        // Calculate the rate at which the bacteria will shrink
+        shrink_rate = shrink_stdv * bacRng.nextGaussian() + shrink_mean;
+    }
+
+    // Function you call when you want to make a bacterium object that is a child of another
+    public CrossProtectionBacterium(BSim sim, BSimChemicalField antibiotic, BSimChemicalField resistant, Vector3d px1, Vector3d px2, long origin_id, long parent_id){
+
+        // "Bacterium" is a type of capsule bacterium, so we need to do all the things that a CapsuleBacterium does first.
+        // This is the purpose of super(). The function super() initializes this bacterium object by first
+        // referring to it as a capsulebacterium.
+        super(sim, px1, px2, origin_id, parent_id);
+
+        this.antibiotic_field = antibiotic;
+        this.resistant_field = resistant;
+
+        growth_threshold = 1e2;
+        conc_threshold = 3e2;
+        production = true;
+        aboveConcThreshold = false;
+        enzymeNum = 3e3;
+
+        Random bacRng = new Random(); 		// Random number generator
+        bacRng.setSeed(50); 				// Initializes random number generator
+
+        // Calculate the initial elongation rate
         initial_el_rate = initial_el_stdv * bacRng.nextGaussian() + initial_el_mean;
         setK_growth(initial_el_rate);
         // Calculate the rate at which the bacteria will shrink
@@ -129,15 +147,11 @@ public class CrossProtectionBacterium extends Bacterium {
     public void set_elMean(double el_mean) { this.initial_el_mean = el_mean; }
     /** Sets the elongation stdv. **/
     public void set_elStdv(double el_stdv) { this.initial_el_stdv = el_stdv; }
-    
-    /** Sets the value of the twist during division. **/
-    public void setTwist(double t) {twist = t;}
-    /** Sets the value of the push during division. **/
-    public void setPush(double p) {push = p;}
-    
+
     // This function is called when the bacterium has passed its' division threshold and is ready to divide.
     public CrossProtectionBacterium divide() {
-        Vector3d randomVec = new Vector3d(rng.nextDouble()/twist,rng.nextDouble()/twist,rng.nextDouble()/twist);
+        Vector3d randomVec = new Vector3d(rng.nextDouble(), rng.nextDouble(), rng.nextDouble());
+        randomVec.scale(twist);
         System.out.println("Bacterium " + this.id + " is dividing...");
 
         Vector3d u = new Vector3d(); 
@@ -172,20 +186,24 @@ public class CrossProtectionBacterium extends Bacterium {
 
         // Set the child cell.
         // Creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
-        CrossProtectionBacterium child = new CrossProtectionBacterium(sim, antibiotic_field, resistant_field, x1_child, new Vector3d(this.x2));
-        lifetime = 0;
-		// Asymmetrical growth occurs at division node
-        this.initialise(L1, x2_new, this.x1);			// Swap x1 and x2 for the mother after division for asymmetrical elongation
-		child.L = L2;
-        
+        CrossProtectionBacterium child = new CrossProtectionBacterium(sim, antibiotic_field, resistant_field, x1_child, new Vector3d(this.x2), this.origin_id, this.id);
+        this.parent_id = this.id;
+        this.lifetime = 0;
+        // this.initialise(L1, this.x1, x2_new); // for symmetric growth
+        // Asymmetrical growth occurs at division node
+        // so we need to swap x1 and x2 for the mother after division for asymmetrical elongation
+        // This does not affect symmetric growth
+        this.initialise(L1, x2_new, this.x1);
+        child.L = L2;
+
         // add child to list of children - Sohaib Nadeem
         addChild(child);
-                
-        // Calculate angle between daughter cells at division - Sheng Fang
+
+        // Calculate angle between daughter cells at division
         angle_initial = coordinate(child);
 
         // Prints a line whenever a new bacterium is made
-        System.out.println("Child ID id " + child.id);
+        System.out.println("Child ID is " + child.id);
         return child;
     }
 

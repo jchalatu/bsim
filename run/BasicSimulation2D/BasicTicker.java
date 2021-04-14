@@ -5,6 +5,7 @@ import bsim.BSimTicker;
 import bsim.capsule.BSimCapsuleBacterium;
 import bsim.capsule.Mover;
 import bsim.capsule.RelaxationMoverGrid;
+import bsim.winter2021.Bacterium;
 import com.beust.jcommander.Parameter;
 
 import java.util.ArrayList;

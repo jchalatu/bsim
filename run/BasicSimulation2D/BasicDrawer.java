@@ -4,6 +4,7 @@ import bsim.BSim;
 import bsim.capsule.BSimCapsuleBacterium;
 import bsim.draw.BSimDrawer;
 import bsim.draw.BSimP3DDrawer;
+import bsim.winter2021.Bacterium;
 import processing.core.PConstants;
 import processing.core.PGraphics3D;
 

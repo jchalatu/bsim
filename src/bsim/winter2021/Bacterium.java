@@ -11,17 +11,17 @@ import java.util.List;
  */
 public class Bacterium extends BSimCapsuleBacterium {
     public final long origin_id;
-    public final long parent_id;
+    public long parent_id;
     public int lifetime;
 
     /** These fields are used to build a tree structure to keep track of lineage - Sohaib Nadeem */
-    private List<Bacterium> children;
-    private Bacterium parent;
+    protected List<Bacterium> children;
+    protected Bacterium parent;
 
     /** Scales randomVec during division **/
-    static double twist = 100;
+    public static double twist = 0.1; // 0.01
     /** Scales longVec during division **/
-    static double push = 0.05;
+    public static double push = 0.05;
 
     /** Enables asymmetric growth. */
     static boolean asymmetric_growth = false;
@@ -179,6 +179,7 @@ public class Bacterium extends BSimCapsuleBacterium {
         // Set the child cell.
         // Creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
         Bacterium child = new Bacterium(sim, x1_child, new Vector3d(this.x2), this.origin_id, this.id);
+        this.parent_id = this.id;
         this.lifetime = 0;
         // this.initialise(L1, this.x1, x2_new); // for symmetric growth
         // Asymmetrical growth occurs at division node
@@ -190,7 +191,7 @@ public class Bacterium extends BSimCapsuleBacterium {
         // add child to list of children - Sohaib Nadeem
         addChild(child);
 
-        // Calculate angle between daughter cells at division - Sheng Fang
+        // Calculate angle between daughter cells at division
         angle_initial = coordinate(child);
 
         // Prints a line whenever a new bacterium is made

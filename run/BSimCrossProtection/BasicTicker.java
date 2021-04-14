@@ -9,8 +9,6 @@ import bsim.capsule.RelaxationMoverGrid;
 import java.util.ArrayList;
 import java.util.Random;
 
-import BasicSimulation2D.Bacterium;
-
 public class BasicTicker extends BSimTicker {
 
     BSim sim;

@@ -3,6 +3,7 @@ package BasicSimulation2D;
 import bsim.BSim;
 import bsim.capsule.BSimCapsuleBacterium;
 import bsim.export.BSimLogger;
+import bsim.winter2021.Bacterium;
 
 import java.io.IOException;
 import java.util.ArrayList;
