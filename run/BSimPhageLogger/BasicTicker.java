@@ -1,12 +1,11 @@
 package BSimPhageLogger;
 
-import bsim.BSim;
+import bsim.BSim; 
 import bsim.BSimChemicalField;
 import bsim.BSimTicker;
 import bsim.capsule.BSimCapsuleBacterium;
 import bsim.capsule.Mover;
 import bsim.capsule.RelaxationMoverGrid;
-import com.beust.jcommander.Parameter;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -80,6 +79,10 @@ public class BasicTicker extends BSimTicker {
     // 7. bacteria which are out of bounds are removed from the simulation
     @Override
     public void tick() {
+        // increase lifetimes of cells
+        for (PhageFieldBacterium b : bac) {
+            b.lifetime++;
+        }
     	
         /********************************************** Action */
     	
