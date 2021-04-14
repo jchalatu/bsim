@@ -60,7 +60,7 @@ public class BSimCapsuleBacterium {
     public double L_max = 15*L_initial;
 
     // how long the bacterium must be before there it divides
-    public double L_th = 7; //make sure L_max is greater than L_th, default is 7
+    public static double L_th = 7; //make sure L_max is greater than L_th, default is 7
     
 	/** Length threshold for asymmetric growth (um). */
 	final public double L_asym = 5;
