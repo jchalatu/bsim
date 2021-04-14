@@ -16,6 +16,7 @@ import java.util.*;
  * will start to shrink and die (turns red in the simulation). 
  */
 public class CrossProtectionBacterium extends Bacterium {
+	public int lifetime;
 	
     /** Scales randomVec during division **/
     static double twist;
@@ -61,6 +62,8 @@ public class CrossProtectionBacterium extends Bacterium {
         // This is the purpose of super(). The function super() initializes this bacterium object by first
         // referring to it as a capsulebacterium.
         super(sim, px1, px2);
+        
+        lifetime = 0;
         
         this.antibiotic_field = antibiotic;	
         this.resistant_field = resistant;
@@ -170,6 +173,7 @@ public class CrossProtectionBacterium extends Bacterium {
         // Set the child cell.
         // Creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
         CrossProtectionBacterium child = new CrossProtectionBacterium(sim, antibiotic_field, resistant_field, x1_child, new Vector3d(this.x2));
+        lifetime = 0;
 		// Asymmetrical growth occurs at division node
         this.initialise(L1, x2_new, this.x1);			// Swap x1 and x2 for the mother after division for asymmetrical elongation
 		child.L = L2;
