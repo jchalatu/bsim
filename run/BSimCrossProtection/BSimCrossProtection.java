@@ -131,7 +131,7 @@ public class BSimCrossProtection {
     
     // twist
     @Parameter(names="-twist",arity=1,description = "twist")
-    public static double twist = 100;
+    public static double twist = 0.1;
     // push
     @Parameter(names="-push",arity=1,description = "push")
     public static double push = 0.05;
