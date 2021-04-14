@@ -9,6 +9,8 @@ import bsim.capsule.RelaxationMoverGrid;
 import java.util.ArrayList;
 import java.util.Random;
 
+import BasicSimulation2D.Bacterium;
+
 public class BasicTicker extends BSimTicker {
 
     BSim sim;
@@ -163,6 +165,13 @@ public class BasicTicker extends BSimTicker {
     // 7. bacteria which are out of bounds are removed from the simulation
     @Override
     public void tick() {
+        // increase lifetimes of cells
+        for (CrossProtectionBacterium b : bacA) {
+            b.lifetime++;
+        }
+        for (CrossProtectionBacterium b : bacB) {
+            b.lifetime++;
+        }
     	
         /********************************************** Action */
     	
