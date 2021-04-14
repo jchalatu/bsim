@@ -18,7 +18,8 @@ import java.lang.Math;
 /**
  */
 public class CrossFeedingBacterium extends Bacterium {
-
+	public int lifetime;
+	
     /** Scales randomVec during division **/
     static double twist;
     /** Scales longVec during division **/
@@ -61,6 +62,8 @@ public class CrossFeedingBacterium extends Bacterium {
         // This is the purpose of super(). The function super() initializes this bacterium object by first
         // referring to it as a capsulebacterium.
         super(sim, px1, px2);
+        
+        lifetime = 0;
         
         this.production_field = production_field;	
         this.consumption_field = consumption_field;
@@ -162,6 +165,7 @@ public class CrossFeedingBacterium extends Bacterium {
         // Set the child cell.
         // Creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
         CrossFeedingBacterium child = new CrossFeedingBacterium(sim, production_field, consumption_field, x1_child, new Vector3d(this.x2));
+        lifetime = 0;
 														// Asymmetrical growth occurs at division node
         this.initialise(L1, x2_new, this.x1);			// Swap x1 and x2 for the mother after division for asymmetrical elongation
 		child.L = L2;
