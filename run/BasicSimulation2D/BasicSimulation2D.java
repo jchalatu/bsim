@@ -11,6 +11,8 @@ import bsim.draw.BSimP3DDrawer;
 import bsim.export.BSimExporter;
 import bsim.export.BSimLogger;
 import bsim.export.BSimPngExporter;
+import bsim.winter2021.Bacterium;
+
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import processing.core.PConstants;
