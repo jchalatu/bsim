@@ -461,7 +461,7 @@ public class BSimPhageField {
              * Export a csv file to save information about infection
              */
             PhageFieldLogger logger = new PhageFieldLogger(sim, filePath + "BSim_Simulation.csv", bac, pixel_to_um_ratio);
-            logger.setDt(export_time);			// Set export time step
+            logger.setDt(sim.getDt());			// Set export time step
             sim.addExporter(logger);
 
             sim.export();
