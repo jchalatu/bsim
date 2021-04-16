@@ -344,7 +344,7 @@ public abstract class BSimP3DDrawer extends BSimDrawer {
 	}
 	
 	/*
-	 * Updated for 2D simulation of phage field
+	 * Updated for 2D simulation of chemical fields
 	 */
 	
 	/**
