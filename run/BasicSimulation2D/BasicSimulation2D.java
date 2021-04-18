@@ -10,7 +10,9 @@ import bsim.draw.BSimDrawer;
 import bsim.draw.BSimP3DDrawer;
 import bsim.export.BSimExporter;
 import bsim.export.BSimLogger;
+import bsim.export.BSimMovExporter;
 import bsim.export.BSimPngExporter;
+import bsim.winter2021.Bacterium;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import processing.core.PConstants;
@@ -29,6 +31,7 @@ import java.util.List;
 // Growth experiments from Winter 2021
 
 public class BasicSimulation2D {
+    /*
     // Sohaib Nadeem
     // pixel to um scaling: the images are a bit more than 2000 pixels wide, while the simulation is rougly 200 micrometers
     // so the conversion factor ends up being 13.89
@@ -81,6 +84,8 @@ public class BasicSimulation2D {
     //elongation threshold mean
     @Parameter(names = "-len_mean", arity = 1, description = "elongation threshold mean")
     public static double length_mean = 7.0;
+    */
+
 
     /**
      * Whether to enable growth in the ticker etc. or not...
@@ -90,7 +95,28 @@ public class BasicSimulation2D {
 
     static Random bacRng;
 
+    /*
+    public void set_parameters(Parameters par) {
+        export = par.export;
+        imageDimensions = par.imageDimensions;
+        fixedBounds = par.fixedBounds;
+        initialPopulation = par.initialPopulation;
+        populationRatio = par.export;
+        growth_stdv = par.export;
+        growth_mean = par.export;
+        length_stdv = par.export;
+        length_mean = par.export;
+        pixel_to_um_ratio = par.export;
+        width_pixels = par.export;
+        height_pixels = par.export;
+        width_um = width_pixels / pixel_to_um_ratio; // should be kept as constants for cell prof.
+        height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
 
+    }
+
+     */
+
+    /*
     // this is the very first function that runs in the simulation
     // this runs the simulation
     public static void main(String[] args) {
@@ -106,15 +132,78 @@ public class BasicSimulation2D {
         // begins simulation
         bsim_ex.run();
     }
+     */
 
-    public static Bacterium createBacterium(BSim sim, Vector3d x1, Vector3d x2, int origin) {
+    // this is the very first function that runs in the simulation
+    // this runs the simulation
+    public static void main(String[] args) {
+        /*
+        // starts up JCommander which allows you to read options from the command line more easily
+        // command line stuff
+         */
+        Parameters bsim_parameters = new Parameters();
+        new JCommander(bsim_parameters, args);
+
+        // begins simulation
+        run(bsim_parameters);
+    }
+
+    // a multithreaded version of main; this runs 4 simulation concurrently
+    // TODO: output to console and saved files are not being handled correctly
+    //  (saved files by the loggers are only kept for a single thread)
+    public static void multithreading(String[] args) {
+        /*
+        ArrayList<Parameters> par = new ArrayList();
+        for(int i = 0; i < 4; i++) {
+            // starts up JCommander which allows you to read options from the command line more easily
+            // command line stuff
+            Parameters bsim_parameters = new Parameters();
+            new JCommander(bsim_parameters, args);
+            par.add(bsim_parameters);
+        }
+
+        ArrayList<Thread> threads = new ArrayList();
+        for(int i = 0; i < 4; i++) {
+            threads.add( new Thread(() -> run(par.get(i))) );
+        }
+        */
+
+        ArrayList<Thread> threads = new ArrayList();
+        Parameters p1 = new Parameters();
+        new JCommander(p1, args);
+        threads.add( new Thread(() -> run(p1)) );
+        Parameters p2 = new Parameters();
+        new JCommander(p2, args);
+        threads.add( new Thread(() -> run(p2)) );
+        Parameters p3 = new Parameters();
+        new JCommander(p3, args);
+        threads.add( new Thread(() -> run(p3)) );
+        Parameters p4 = new Parameters();
+        new JCommander(p4, args);
+        threads.add( new Thread(() -> run(p4)) );
+
+        for(int i = 0; i < 4; i++) {
+            threads.get(i).start();
+        }
+
+        for(int i = 0; i < 4; i++) {
+            try {
+                threads.get(i).join();
+            } catch (InterruptedException e) {
+                e.printStackTrace(); // if there is an error, this will just print out the message
+            }
+        }
+    }
+
+    public static Bacterium createBacterium(BSim sim, Vector3d x1, Vector3d x2, double growthRate, double lengthThreshold) {
         // creates a new bacterium object whose endpoints correspond to the above data
-        Bacterium bacterium = new Bacterium(sim, x1, x2, origin, -1);
+        //Bacterium bacterium = new Bacterium(sim, x1, x2, origin, -1);
+        Bacterium bacterium = new Bacterium(sim, x1, x2);
 
         // determine the vector between the endpoints
         // if the data suggests that a bacterium is larger than L_max, that bacterium will instead
         // be initialized with length 1. Otherwise, we set the length in the following if statement
-        // Earlier they were all initiatlied to lengthe 1.
+        // Earlier they were all initialised to length 1.
         Vector3d dispx1x2 = new Vector3d();
         dispx1x2.sub(x2, x1); // sub is subtract
         double length = dispx1x2.length(); // determined.
@@ -122,10 +211,8 @@ public class BasicSimulation2D {
             bacterium.initialise(length, x1, x2); // redundant to record length, but ok.
         }
 
-        // assigns a growth rate and a division length to bacterium according to a normal distribution
-        double growthRate = growth_stdv * bacRng.nextGaussian() + growth_mean;
+        // assign the growth rate and division length to the bacterium
         bacterium.setK_growth(growthRate);
-        double lengthThreshold = length_stdv * bacRng.nextGaussian() + length_mean;
         bacterium.setElongationThreshold(lengthThreshold);
 
         return bacterium;
@@ -138,11 +225,27 @@ public class BasicSimulation2D {
     // |----> Updates bacteria positions according to the forces acting on them
     // |----> Logs all data from the simulation into an excel sheet
     // |----> Saves images of simulation
-    public void run() {
+    public static void run(Parameters parameters) {
+        boolean export = parameters.export;
+        int[] imageDimensions = parameters.imageDimensions;
+        boolean fixedBounds = parameters.fixedBounds;
+        int initialPopulation = parameters.initialPopulation;
+        double populationRatio = parameters.populationRatio;
+        double growth_stdv = parameters.growth_stdv;
+        double growth_mean = parameters.growth_mean;
+        double length_stdv = parameters.length_stdv;
+        double length_mean = parameters.length_mean;
+
+        final double pixel_to_um_ratio = parameters.pixel_to_um_ratio;
+        final int width_pixels = parameters.imageDimensions[0];
+        final int height_pixels = parameters.imageDimensions[1];
+        final double width_um = width_pixels / pixel_to_um_ratio; // should be kept as constants for cell prof.
+        final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
+
         // initializes simulation domain size
-        final double simX = simDimensions.get(0);
-        final double simY = simDimensions.get(1);
-        final double simZ = simDimensions.get(2);
+        final double simX = width_um;
+        final double simY = height_um;
+        final double simZ = 1.0;
 
         // saves the exact time when the simulation started, real wall clock time
         long simulationStartTime = System.nanoTime();
@@ -170,7 +273,7 @@ public class BasicSimulation2D {
          * Create the bacteria
          */
         // Separate lists of bacteria in case we want to manipulate the species individually
-        // if multiple subpopulations, they'd be initiallized separately, they'd be kept in different
+        // if multiple subpopulations, they'd be initialized separately, they'd be kept in different
         // need an array for each subpopulation, members can be repeated.
         final ArrayList<Bacterium> bac = new ArrayList();
         // Track all of the bacteria in the simulation, for use of common methods etc
@@ -184,9 +287,10 @@ public class BasicSimulation2D {
         //specify output file path
         String systemPath = new File("").getAbsolutePath() + "\\SingleCellSims";
 
-        //String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\twocellssidebyside2-400by400.csv";
-        String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\MyExpt_IdentifyPrimaryObjects.csv";
-        CellProfilerReader reader = new CellProfilerReader(initial_data_path, pixel_to_um_ratio, 1);
+        String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\twocellssidebyside2-400by400.csv";
+        RawReader reader = new RawReader(initial_data_path, pixel_to_um_ratio);
+        //String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\MyExpt_IdentifyPrimaryObjects.csv";
+        //CellProfilerReader reader = new CellProfilerReader(initial_data_path, pixel_to_um_ratio, 1);
         ArrayList<double[]> cell_endpoints = reader.readcsv();
         for(int i = 0; i < cell_endpoints.size(); i++) {//double[] cell : cell_endpoints) {
             double[] cell = cell_endpoints.get(i);
@@ -194,7 +298,10 @@ public class BasicSimulation2D {
             // note that the endpoint positions are scaled by pixel_to_um_ratio,
             Vector3d x1 = new Vector3d(cell[0], cell[1], 0.5);
             Vector3d x2 = new Vector3d(cell[2], cell[3], 0.5);
-            Bacterium bac0 = createBacterium(sim, x1, x2, i);
+            // assigns a growth rate and a division length to bacterium according to a normal distribution
+            double growthRate = growth_stdv * bacRng.nextGaussian() + growth_mean;
+            double lengthThreshold = length_stdv * bacRng.nextGaussian() + length_mean;
+            Bacterium bac0 = createBacterium(sim, x1, x2, growthRate, lengthThreshold);
             // adds the newly created bacterium to our lists for tracking purposes
             bac.add(bac0); // for separate subpopulations
             bacteriaAll.add(bac0);  // for all cells
@@ -215,7 +322,9 @@ public class BasicSimulation2D {
         BasicDrawer drawer = new BasicDrawer(sim, width_pixels, height_pixels, pixel_to_um_ratio, bac);
         sim.setDrawer(drawer);
 
-        export = true;
+        /*********************************************************
+         * Set up the exporters if in export mode and run the simulation
+         */
         if (export) {
             String simParameters = "" + BSimUtils.timeStamp() + "__dim_" + simX + "_" + simY + "_" + simZ
                     + "__ip_" + initialPopulation
@@ -235,6 +344,16 @@ public class BasicSimulation2D {
             /**
              * Export a rendered image file
              */
+            //BSimLogger metaLogger = new BSimLogger(sim, filePath + "simInfo.txt");
+            //metaLogger.setDt(export_time);//3600);			// Set export time step
+            //sim.addExporter(metaLogger);
+            //BSimLogger posLogger = new BSimLogger(sim, filePath + "position.csv");
+            //posLogger.setDt(export_time);			// set export time step for csv file
+            //sim.addExporter(posLogger);
+            //BSimLogger sumLogger = new BSimLogger(sim, filePath + "summary.csv");
+            //sumLogger.setDt(export_time);			// Set export time step
+            //sim.addExporter(sumLogger);
+
             BSimPngExporter imageExporter = new BSimPngExporter(sim, drawer, filePath);
             imageExporter.setDt(export_time); //this is how often it will output a frame
             // separate time-resolution for images vs excel file
@@ -248,6 +367,12 @@ public class BasicSimulation2D {
             // (Lifetime could be converted to be in terms of cp_logger.dt if we use a multiple of sim.dt)
             cp_logger.setDt(sim.getDt());
             sim.addExporter(cp_logger);
+
+            //Export a video of the simulation
+            BSimMovExporter videoExporter = new BSimMovExporter(sim, drawer, filePath + "video.mp4" );
+            videoExporter.setSpeed(1); // the number of simulation time units played in one second
+            videoExporter.setDt(0.05); // this is how often (in simulation time) it will output a frame for the video
+            sim.addExporter(videoExporter);
 
             sim.export();
 

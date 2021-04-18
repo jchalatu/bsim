@@ -38,7 +38,8 @@ public class BSim {
 	private BSimDrawer drawer;
 	private Vector<BSimExporter> exporters = new Vector<BSimExporter>();	
 	
-	/** Wall boundaries for x_pos, y_pos, z_pos, x_neg, y_neg, z_neg (true = closed, false = open). */
+	/** Wall boundaries for x_pos, y_pos, z_pos, x_neg, y_neg, z_neg (true = closed, false = open).
+	 * These apply only to the BSimCapsuleBacterium class and its subclasses. */
 	public boolean [] wall_boundaries = {true, true, true, true, true, true};
 	/** Sets the open and closed wall boundaries (+x, +y, +z, -x, -y, -z). */
 	public void setWallBoundaries( boolean x_pos, boolean y_pos, boolean z_pos, boolean x_neg, boolean y_neg, boolean z_neg ) {

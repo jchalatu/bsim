@@ -21,7 +21,7 @@ public class CellProfilerReader {
         this.image_number = image_number;
 
         try {
-            // try reading the initial position file
+            // try reading the file
             csvReader = new BufferedReader(new FileReader(filepath));
         } catch (FileNotFoundException e) {
             // if that doesn't work, print out an error

@@ -583,7 +583,7 @@ public class BSimAsymGrowth {
                 @Override
                 public void before() {
                     super.before();
-                    write("time,id, status, p1x, p1y, p1z, p2x, p2y, p2z, px, py, pz, growth_rate, directions");
+                    write("time,id, p1x, p1y, p1z, p2x, p2y, p2z, px, py, pz, growth_rate, directions");
                 }
 
                 @Override
@@ -592,7 +592,6 @@ public class BSimAsymGrowth {
                     buffer = "";
                     for(BSimCapsuleBacterium b : bacteriaAll) {
                         buffer += sim.getFormattedTime()+","+b.id
-                                + "," + b.getInfected()
                                 + "," + b.x1.x
                                 + "," + b.x1.y
                                 + "," + b.x1.z

@@ -10,6 +10,8 @@ import java.util.List;
 /**
  */
 public class Bacterium extends BSimCapsuleBacterium {
+    /** These fields are used to keep track of lineage and time since birth */
+    // TODO: lineage tree structure can be removed to avoid redundancy
     public final long origin_id;
     public long parent_id;
     public int lifetime;

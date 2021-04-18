@@ -110,7 +110,7 @@ public class BSimPhageField {
     
     // twist
     @Parameter(names="-twist",arity=1,description = "twist")
-    public static double twist = 100;
+    public static double twist = 0.1;
     // push
     @Parameter(names="-push",arity=1,description = "push")
     public static double push = 0.05;
@@ -406,7 +406,7 @@ public class BSimPhageField {
                 @Override
                 public void before() {
                     super.before();
-                    write("time,id, status, p1x, p1y, p1z, p2x, p2y, p2z, px, py, pz, growth_rate, directions");
+                    write("time,id, p1x, p1y, p1z, p2x, p2y, p2z, px, py, pz, growth_rate, directions");
                 }
 
                 @Override
@@ -415,7 +415,6 @@ public class BSimPhageField {
                     buffer = "";
                     for(BSimCapsuleBacterium b : bacteriaAll) {
                         buffer += sim.getFormattedTime()+","+b.id
-                                + "," + b.getInfected()
                                 + "," + b.x1.x
                                 + "," + b.x1.y
                                 + "," + b.x1.z
@@ -448,7 +447,7 @@ public class BSimPhageField {
              * Export a csv file to save information about infection
              */
             PhageFieldLogger logger = new PhageFieldLogger(sim, filePath + "BSim_Simulation.csv", bac, pixel_to_um_ratio);
-            logger.setDt(export_time);			// Set export time step
+            logger.setDt(sim.getDt());			// Set export time step
             sim.addExporter(logger);
 
             sim.export();

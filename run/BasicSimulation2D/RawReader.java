@@ -7,13 +7,11 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class RawReader {
     BufferedReader csvReader;
-    double[][] initEndpoints = new double[4][];
-    int rows;
-    int row_number;
     final double pixel_to_um_ratio;
 
     public RawReader(String filepath, double pixel_to_um_ratio) {
@@ -26,6 +24,13 @@ public class RawReader {
             // if that doesn't work, print out an error
             e.printStackTrace();
         }
+    }
+
+    // TODO: improve
+    // The csv file is closed after reading
+    public ArrayList<double[]> readcsv() {
+        double[][] initEndpoints = new double[4][];
+        ArrayList<double[]> initEndpoints_arrlist = new ArrayList();
 
         try {
             // goes through each row of the excel sheet and pulls out the initial positions
@@ -45,22 +50,12 @@ public class RawReader {
             e.printStackTrace(); // if there is an error, this will just print out the message
         }
 
-        rows = initEndpoints[0].length;
-        row_number = 0;
-    }
-
-    // TODO: improve
-    public double[] readcsv() {
-        if (row_number < rows) {
-            double[] endpoints = {initEndpoints[0][row_number] / pixel_to_um_ratio,
-                    initEndpoints[1][row_number] / pixel_to_um_ratio,
-                    initEndpoints[2][row_number] / pixel_to_um_ratio,
-                    initEndpoints[3][row_number] / pixel_to_um_ratio};
-            row_number++;
-            return endpoints;
+        for(int i = 0; i < initEndpoints[i].length; i++) {
+            initEndpoints_arrlist.add(new double[] {initEndpoints[0][i] / pixel_to_um_ratio,
+                    initEndpoints[1][i] / pixel_to_um_ratio,
+                    initEndpoints[2][i] / pixel_to_um_ratio,
+                    initEndpoints[3][i] / pixel_to_um_ratio});
         }
-        else {
-            return null;
-        }
+        return initEndpoints_arrlist;
     }
 }
