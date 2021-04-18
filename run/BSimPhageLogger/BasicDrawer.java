@@ -1,4 +1,4 @@
-package BSimPhageLogger;
+package BSimPhageField;
 
 import bsim.BSim;
 import bsim.BSimChemicalField;
