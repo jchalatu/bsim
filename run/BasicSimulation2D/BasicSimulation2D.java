@@ -1,28 +1,17 @@
 package BasicSimulation2D;
 
 import bsim.BSim;
-import bsim.BSimTicker;
 import bsim.BSimUtils;
 import bsim.capsule.BSimCapsuleBacterium;
-import bsim.capsule.Mover;
-import bsim.capsule.RelaxationMoverGrid;
-import bsim.draw.BSimDrawer;
-import bsim.draw.BSimP3DDrawer;
-import bsim.export.BSimExporter;
-import bsim.export.BSimLogger;
-import bsim.export.BSimMovExporter;
 import bsim.export.BSimPngExporter;
+import bsim.export.BSimMovExporter;
 import bsim.winter2021.Bacterium;
+
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-import processing.core.PConstants;
-import processing.core.PGraphics3D;
 
 import javax.vecmath.Vector3d;
-import java.awt.*;
 import java.io.*;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.*;
 import java.util.List;
 
@@ -72,20 +61,57 @@ public class BasicSimulation2D {
     public double populationRatio = 0.0;
 
     //growth rate standard deviation
-    @Parameter(names = "-gr_stdv", arity = 1, description = "growth rate standard deviation")
-    public static double growth_stdv = 0.2;
-    //growth rate mean
-    @Parameter(names = "-gr_mean", arity = 1, description = "growth rate mean")
-    public static double growth_mean = 2.1;
+    @Parameter(names="-el_stdv",arity=1,description = "elongation rate standard deviation")
+    public static double el_stdv = 0.2;//0.277;
+    @Parameter(names="-el_mean",arity=1,description = "elongation rate mean")
+    public static double el_mean = 2.1;//1.23;
 
     //elongation threshold standard deviation
-    @Parameter(names = "-len_stdv", arity = 1, description = "elongation threshold standard deviation")
-    public static double length_stdv = 0.1;
+    @Parameter(names="-div_stdv",arity=1,description = "elongation threshold standard deviation")
+    public static double div_stdv = 0.1;
     //elongation threshold mean
-    @Parameter(names = "-len_mean", arity = 1, description = "elongation threshold mean")
-    public static double length_mean = 7.0;
-    */
+    @Parameter(names="-div_mean",arity=1,description = "elongation threshold mean")
+    public static double div_mean = 7.0;
 
+    // Simulation Time
+    @Parameter(names="-simt",arity=1,description = "simulation time")
+    public static double sim_time = 5.0;
+    @Parameter(names="-simdt",arity=1,description = "simulation time step")
+    public static double sim_dt = 0.05;
+    @Parameter(names="-export_time",arity=1,description = "export time")
+    public static double export_time = 0.5;// Previously was 10, and simulation time was 100
+
+    // internal force
+    @Parameter(names="-k_int",arity=1,description = "internal force")
+    public static double k_int = 50.0;
+    // cell-cell collision force
+    @Parameter(names="-k_cell",arity=1,description = "cell-cell collision force")
+    public static double k_cell = 50.0;
+    // sticking force
+    @Parameter(names="-k_stick",arity=1,description = "side-to-side attraction")
+    public static double k_sticking = 10.0;
+
+    // sticking range
+    @Parameter(names="-rng_stick",arity=1,description = "max range side-to-side attraction")
+    public static double range_sticking = 0.6;
+
+    // twist
+    @Parameter(names="-twist",arity=1,description = "twist")
+    public static double twist = 0.1;
+    // push
+    @Parameter(names="-push",arity=1,description = "push")
+    public static double push = 0.05;
+
+    // asymmetric growth threshold
+    @Parameter(names="-l_asym",arity=1,description = "asymmetric growth threshold")
+    public static double L_asym = 3.75;
+    // value of asymmetry
+    @Parameter(names="-asym",arity=1,description = "asymmetry")
+    public static double asymmetry = 0.1;
+    // symmetric growth
+    @Parameter(names="-sym",arity=1,description = "symmetric growth")
+    public static double sym_growth = 0.05;
+     */
 
     /**
      * Whether to enable growth in the ticker etc. or not...
@@ -94,27 +120,6 @@ public class BasicSimulation2D {
     private static final boolean WITH_GROWTH = true;
 
     static Random bacRng;
-
-    /*
-    public void set_parameters(Parameters par) {
-        export = par.export;
-        imageDimensions = par.imageDimensions;
-        fixedBounds = par.fixedBounds;
-        initialPopulation = par.initialPopulation;
-        populationRatio = par.export;
-        growth_stdv = par.export;
-        growth_mean = par.export;
-        length_stdv = par.export;
-        length_mean = par.export;
-        pixel_to_um_ratio = par.export;
-        width_pixels = par.export;
-        height_pixels = par.export;
-        width_um = width_pixels / pixel_to_um_ratio; // should be kept as constants for cell prof.
-        height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
-
-    }
-
-     */
 
     /*
     // this is the very first function that runs in the simulation
@@ -236,6 +241,19 @@ public class BasicSimulation2D {
         double length_stdv = parameters.length_stdv;
         double length_mean = parameters.length_mean;
 
+
+        // Assigns the specified forces, range, and impulses
+        bacterium.setIntForce(k_int);
+        bacterium.setCellForce(k_cell);
+        bacterium.setStickForce(k_sticking);
+        bacterium.setStickingRange(range_sticking);
+        bacterium.setTwist(twist);
+        bacterium.setPush(push);
+
+        bacterium.setLAsym(L_asym);
+        bacterium.setAsym(asymmetry);
+        bacterium.setSym(sym_growth);
+
         final double pixel_to_um_ratio = parameters.pixel_to_um_ratio;
         final int width_pixels = parameters.imageDimensions[0];
         final int height_pixels = parameters.imageDimensions[1];
@@ -243,6 +261,9 @@ public class BasicSimulation2D {
         final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
 
         // initializes simulation domain size
+        //final double simX = simDimensions.get(0);
+        //final double simY = simDimensions.get(1);
+        //final double simZ = simDimensions.get(2);
         final double simX = width_um;
         final double simY = height_um;
         final double simZ = 1.0;
@@ -252,10 +273,10 @@ public class BasicSimulation2D {
 
         // create the simulation object
         final BSim sim = new BSim();
-        sim.setDt(0.05);                    // set Simulation Timestep in time units
-        sim.setSimulationTime(5.0);       // specified in time units, could also specify a termination condition elsewhere
+        sim.setDt(sim_dt);                    // set Simulation Timestep in time units
+        sim.setSimulationTime(sim_time);      // specified in time units, could also specify a termination condition elsewhere
         sim.setTimeFormat("0.00");            // Time Format for display on images
-        sim.setBound(simX, simY, simZ);        // Simulation domain Boundaries
+        sim.setBound(simX, simY, simZ);       // Simulation domain Boundaries
 
 
         // Boundaries periodicity: true means walls, false means periodic
@@ -299,9 +320,10 @@ public class BasicSimulation2D {
             Vector3d x1 = new Vector3d(cell[0], cell[1], 0.5);
             Vector3d x2 = new Vector3d(cell[2], cell[3], 0.5);
             // assigns a growth rate and a division length to bacterium according to a normal distribution
-            double growthRate = growth_stdv * bacRng.nextGaussian() + growth_mean;
-            double lengthThreshold = length_stdv * bacRng.nextGaussian() + length_mean;
-            Bacterium bac0 = createBacterium(sim, x1, x2, growthRate, lengthThreshold);
+            // assigns a growth rate and a division length to bacterium according to a normal distribution
+            double growthRate = el_stdv * bacRng.nextGaussian() + el_mean;
+            double divThreshold = div_stdv * bacRng.nextGaussian() + div_mean;
+            Bacterium bac0 = createBacterium(sim, x1, x2, growthRate, divThreshold);
             // adds the newly created bacterium to our lists for tracking purposes
             bac.add(bac0); // for separate subpopulations
             bacteriaAll.add(bac0);  // for all cells
@@ -311,8 +333,9 @@ public class BasicSimulation2D {
          * Set up the ticker
          */
         final int LOG_INTERVAL = 100; // logs data every 100 timesteps
-        BasicTicker ticker = new BasicTicker(sim, bac, bacteriaAll, LOG_INTERVAL, bacRng, growth_stdv, growth_mean,
-                length_stdv, length_mean);
+        BasicTicker ticker = new BasicTicker(sim, bac, bacteriaAll, LOG_INTERVAL, bacRng, el_stdv, el_mean,
+                div_stdv, div_mean);
+        ticker.setGrowth(WITH_GROWTH);
         sim.setTicker(ticker);
 
         // the rest of the code is the drawer (makes simulation images) and data logger (makes csv files)

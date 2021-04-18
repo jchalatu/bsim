@@ -1,4 +1,4 @@
-package BSimPhageLogger;
+package BSimPhageField;
 
 import bsim.BSim;   
 
@@ -22,7 +22,7 @@ import java.io.File;
 
 /**
  * 
- * This class tests the functionality of the phage field.
+ * This class represents an environment with phage.
  * A number of BSimBacterium bacteria are set up to swim around in a phage field.
  * If the density of phage around a bacteria is above a certain threshold, the bacteria
  * will become infected.
@@ -49,8 +49,14 @@ public class BSimPhageField {
     
     @Parameter(names = "-grow", description = "Enable bacteria growth.")
     private boolean WITH_GROWTH = true;
-    @Parameter(names = "-phage", description = "Enable phage.")
+    @Parameter(names = "-flow_in", description = "Enable phage from boundary.")
     private boolean FLOW_IN = false;
+    @Parameter(names = "-phage", description = "Enable initial phage distribution.")
+    private boolean ADD_PHAGE = false;
+    @Parameter(names = "-phage_quant", description = "Initial quantity of phage distribution.")
+    private double initial_quantity = 1e5;
+    @Parameter(names = "-phage_pos", description = "Initial position of phage distribution.")
+    private Vector3d initial_pos = new Vector3d(width_um/2, height_um/2, 1);
     
     // Simulation setup parameters. Set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
@@ -301,6 +307,13 @@ public class BSimPhageField {
         // Some kind of initialize of mover
         final Mover mover;
         mover = new RelaxationMoverGrid(bacteriaAll, sim);
+        
+        /*********************************************************
+         * Add initial distribution of phage 
+         */
+        if (ADD_PHAGE) {
+        	field.addQuantity(initial_pos, initial_quantity);
+        }
 
         /*********************************************************
          * Set up the ticker
