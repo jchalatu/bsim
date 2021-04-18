@@ -50,6 +50,9 @@ public class BasicTicker extends BSimTicker {
         bac_dead = new ArrayList();
         mover = new RelaxationMoverGrid(bacteriaAll, sim);
     }
+    
+    /** Sets the flag for growth. **/
+    public void setGrowth(boolean b) { WITH_GROWTH = b; }
 
     // This one is a bit long too. Let's break it up
     // 1. Begins an "action" -> this represents one timestep
