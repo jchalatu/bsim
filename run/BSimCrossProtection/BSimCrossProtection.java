@@ -87,7 +87,7 @@ public class BSimCrossProtection {
     // Density (cell number)
     // optional call to a default initial set of cells
     @Parameter(names = "-pop", arity = 1, description = "Initial seed population (n_total).")
-    public int initialPopulation = 6;
+    public int initialPopulation = 10;//6;
 
     // A:R ratio
     // for default set of cells, set ratio of two subpopulations
@@ -190,7 +190,7 @@ public class BSimCrossProtection {
 				Math.random()*sim.getBound().y, 
 				Math.random()*sim.getBound().z);
 	
-        double r = BSimCapsuleBacterium.L_th * Math.sqrt(Math.random());
+        double r = div_mean * Math.sqrt(Math.random());
         double theta = Math.random() * 2 * Math.PI;
         Vector3d pos2 = new Vector3d(pos1.x + r * Math.cos(theta), 
 				pos1.y + r * Math.sin(theta), 
@@ -338,7 +338,7 @@ public class BSimCrossProtection {
          * Set up the ticker
          */
         final int LOG_INTERVAL = 100; // logs data every 100 timesteps
-        BasicTicker ticker = new BasicTicker(sim, bacA, bacB, bacteriaAll, LOG_INTERVAL, bacRng, 
+        CrossProtectionTicker ticker = new CrossProtectionTicker(sim, bacA, bacB, bacteriaAll, LOG_INTERVAL, bacRng, 
         		el_stdv, el_mean, div_stdv, div_mean, antibioticA, antibioticB, toxin_condition);
         ticker.setGrowth(WITH_GROWTH);			// enables bacteria growth
         sim.setTicker(ticker);
@@ -346,7 +346,7 @@ public class BSimCrossProtection {
         /*********************************************************
          * Set up the drawer
          */
-        BasicDrawer drawer = new BasicDrawer(sim, width_um, height_um, window_width, window_height,
+        CrossProtectionDrawer drawer = new CrossProtectionDrawer(sim, width_um, height_um, window_width, window_height,
         		bacA, bacB, antibioticA, antibioticB, c, TWO_SCREENS, SINGLE_SCREEN);
         sim.setDrawer(drawer);
         

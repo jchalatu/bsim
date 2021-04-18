@@ -10,7 +10,7 @@ import bsim.capsule.RelaxationMoverGrid;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class BasicTicker extends BSimTicker {
+public class PhageFieldTicker extends BSimTicker {
 
     BSim sim;
     // logs data about time taken by ticker every LOG_INTERVAL timesteps
@@ -45,7 +45,7 @@ public class BasicTicker extends BSimTicker {
     /** Defines the progress of the chemical field flowing through the boundary on the x-axis. */
     int endpoint_x = 0;
 
-    public BasicTicker(BSim sim, ArrayList<PhageFieldBacterium> bac, ArrayList<BSimCapsuleBacterium> bacteriaAll, int LOG_INTERVAL,
+    public PhageFieldTicker(BSim sim, ArrayList<PhageFieldBacterium> bac, ArrayList<BSimCapsuleBacterium> bacteriaAll, int LOG_INTERVAL,
                        Random bacRng, double el_stdv, double el_mean, double div_stdv, double div_mean,
                        BSimChemicalField field, int field_box_num) {
         this.sim = sim;

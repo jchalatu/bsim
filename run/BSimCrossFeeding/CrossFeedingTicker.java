@@ -1,6 +1,7 @@
-package BSimCrossProtection;
+package BSimCrossFeeding;
 
-import bsim.BSim;
+import bsim.BSim;  
+import bsim.BSimChemicalField;
 import bsim.BSimTicker;
 import bsim.capsule.BSimCapsuleBacterium;
 import bsim.capsule.Mover;
@@ -9,14 +10,12 @@ import bsim.capsule.RelaxationMoverGrid;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class BasicTicker extends BSimTicker {
+public class CrossFeedingTicker extends BSimTicker {
 
     BSim sim;
     // logs data about time taken by ticker every LOG_INTERVAL timesteps
     final int LOG_INTERVAL;
-    /** Whether to enable growth in the ticker etc. or not... */
-    private static boolean WITH_GROWTH = true;
-    
+    public static boolean WITH_GROWTH;
     static Random bacRng;
     //growth rate standard deviation
     public final double growth_stdv;
@@ -27,56 +26,24 @@ public class BasicTicker extends BSimTicker {
     //elongation threshold mean
     public final double length_mean;
 
-    final ArrayList<CrossProtectionBacterium> bacA;
-    final ArrayList<CrossProtectionBacterium> bacB;
+    final ArrayList<CrossFeedingBacterium> bacA;
+    final ArrayList<CrossFeedingBacterium> bacB;
     final ArrayList<BSimCapsuleBacterium> bacteriaAll;
-    final ArrayList<CrossProtectionBacterium> bac_bornA;
-    final ArrayList<CrossProtectionBacterium> bac_bornB;
-    final ArrayList<CrossProtectionBacterium> bac_deadA;
-    final ArrayList<CrossProtectionBacterium> bac_deadB;
+    final ArrayList<CrossFeedingBacterium> bac_bornA;
+    final ArrayList<CrossFeedingBacterium> bac_bornB;
+    final ArrayList<CrossFeedingBacterium> bac_deadA;
+    final ArrayList<CrossFeedingBacterium> bac_deadB;
     
-    public static ChemicalField antibioticA;
-    public static ChemicalField antibioticB;
-    
-	// Initial Conditions
-	/** Used to determine the toxin distribution for the simulation. */
-	private int toxin_condition;
-	
-	/** Toxins flow in from the left boundary. */
-	private static final int FLOW_IN = 1;
-	/** Simulation increases uniform distribution of toxin. */
-	private static final int UNIFORM = 2;
-	/** Steady state concentration level. */
-	private double initial_conc = 310;
-    /** How much toxin A increases per hour. */
-    private double toxin_increment_A = 50;
-    /** How much toxin B increases per hour. */
-    private double toxin_increment_B = 50;
-    /** Delay for toxin A. */
-    private int delayA = 0;
-    /** Delay for toxin B. */
-    private int delayB = 0;
-    /** Delay counter for toxin A. */
-    private int delayCountA = 0;
-    /** Delay counter for toxin B. */
-    private int delayCountB = 0;
-    
-    // For a single screen
-    final int MIXED_CONC = 1;
-    final int CHECKER_BOARD = 2;
-    int SINGLE_SCREEN = 2;
-    
-    /** Defines the progress of the chemical field flowing through the boundary on the x-axis. */
-    int endpoint_x = 0;
-    int field_box_num = 50;
+    public static BSimChemicalField amino_acid_A;
+    public static BSimChemicalField amino_acid_B;
 
     // internal machinery - don't worry about this
     final Mover mover;
 
-    public BasicTicker(BSim sim, ArrayList<CrossProtectionBacterium> bacA, ArrayList<CrossProtectionBacterium> bacB,
+    public CrossFeedingTicker(BSim sim, ArrayList<CrossFeedingBacterium> bacA, ArrayList<CrossFeedingBacterium> bacB,
     		ArrayList<BSimCapsuleBacterium> bacteriaAll, int LOG_INTERVAL, Random bacRng, 
     		double growth_stdv, double growth_mean, double length_stdv, double length_mean,
-    		ChemicalField antibioticA, ChemicalField antibioticB, int toxin_condition) {
+    		BSimChemicalField amino_acid_A, BSimChemicalField amino_acid_B) {
         this.sim = sim;
         this.LOG_INTERVAL = LOG_INTERVAL;
         this.bacRng = bacRng; //random number generator
@@ -93,25 +60,24 @@ public class BasicTicker extends BSimTicker {
         bac_deadB = new ArrayList();
         mover = new RelaxationMoverGrid(bacteriaAll, sim);
         
-        BasicTicker.antibioticA = antibioticA;
-        BasicTicker.antibioticB = antibioticB;
-        this.toxin_condition = toxin_condition;
+        CrossFeedingTicker.amino_acid_A = amino_acid_A;
+        CrossFeedingTicker.amino_acid_B = amino_acid_B;
     }
     
     /** Sets the flag for growth. **/
     public void setGrowth(boolean b) { WITH_GROWTH = b; }
     
     /** Function for bacteria growth activities. */
-    public void growBacteria( ArrayList<CrossProtectionBacterium> bac, ArrayList<CrossProtectionBacterium> bacBorn ) {
+    public void growBacteria( ArrayList<CrossFeedingBacterium> bac, ArrayList<CrossFeedingBacterium> bacBorn ) {
     	Random bacRng = new Random(); 			// Random number generator
     	bacRng.setSeed(50); 					// Initializes random number generator
     	
-        for (CrossProtectionBacterium b : bac) { 				// Loop over bac array
+        for (CrossFeedingBacterium b : bac) { 				// Loop over bac array
             b.grow();
 
             // Divide if grown past threshold
             if (b.L >= b.L_th) {
-            	CrossProtectionBacterium daughter = b.divide();
+            	CrossFeedingBacterium daughter = b.divide();
             	
             	bacBorn.add(daughter);  		// Add daughter to newborn class, 'mother' keeps her status
             }
@@ -121,7 +87,7 @@ public class BasicTicker extends BSimTicker {
         bacteriaAll.addAll(bacBorn); 			// Adds all the newborn daughters to total population
         
         // Allow daughter cells to grow 
-        for ( CrossProtectionBacterium b : bacBorn ) {
+        for ( CrossFeedingBacterium b : bacBorn ) {
         	
             // Assigns a division length to each bacterium according to a normal distribution
             double lengthThreshold = length_stdv*bacRng.nextGaussian()+length_mean;
@@ -132,9 +98,9 @@ public class BasicTicker extends BSimTicker {
     }
     
     /** Function to remove bacteria due to cell death or by boundary. */
-    public void removeBacteria( BSim sim, ArrayList<CrossProtectionBacterium> bac, ArrayList<CrossProtectionBacterium> bac_dead ) {
+    public void removeBacteria( BSim sim, ArrayList<CrossFeedingBacterium> bac, ArrayList<CrossFeedingBacterium> bac_dead ) {
 
-        for (CrossProtectionBacterium b : bac) {
+        for (CrossFeedingBacterium b : bac) {
         	
             // Kick out if past any boundary
         	// Bacteria out of bounds = dead
@@ -152,7 +118,7 @@ public class BasicTicker extends BSimTicker {
         bacteriaAll.removeAll(bac_dead);
         bac_dead.clear();
     }
-
+    
     // This one is a bit long too. Let's break it up
     // 1. Begins an "action" -> this represents one timestep
     // 2. Tells each bacterium to perform their action() function
@@ -164,10 +130,10 @@ public class BasicTicker extends BSimTicker {
     @Override
     public void tick() {
         // increase lifetimes of cells
-        for (CrossProtectionBacterium b : bacA) {
+        for (CrossFeedingBacterium b : bacA) {
             b.lifetime++;
         }
-        for (CrossProtectionBacterium b : bacB) {
+        for (CrossFeedingBacterium b : bacB) {
             b.lifetime++;
         }
     	
@@ -191,77 +157,9 @@ public class BasicTicker extends BSimTicker {
         
         startTimeAction = System.nanoTime();
         
-        /** Allow the flow of antibiotics through a boundary. */
-          
-        final int VER1 = 1;
-        final int VER2 = 2;
-        final int VER3 = 3;
-        int version = 2;
-        
-        // State enabled where antibiotic flows in through a boundary
-        if ( toxin_condition == FLOW_IN ) {
-        	if ( version == VER1 ) {
-        		final double conc = 1e3; 
-            	if ( endpoint_x < field_box_num ) {
-            		for ( int i = 0; i < field_box_num; i ++ ) {
-            			antibioticA.addQuantity( endpoint_x, i, 0, conc * sim.getDt() );
-            			antibioticB.addQuantity( endpoint_x, i, 0, conc * sim.getDt() );
-            		}
-            		endpoint_x ++;
-            	}
-            	else {
-            		endpoint_x = 0;
-            	}
-        	}
-        	else if ( version == VER2 ) {
-        		final double conc = 50; 
-            	if ( endpoint_x < field_box_num ) {
-                	for ( int x = 0; x < endpoint_x; x ++ ) {
-                		for ( int y = 0; y < field_box_num; y ++ ) {
-                			antibioticA.addQuantity( x, y, 0, conc * sim.getDt() );
-                			antibioticB.addQuantity( x, y, 0, conc * sim.getDt() );
-                		}
-                	}
-                	endpoint_x ++;
-            	}
-            	else {
-            		endpoint_x = 0;
-            	}
-        	}
-        	else if ( version == VER3 ) {
-        		final double conc = 2e3; 
-            	for ( int i = 0; i < field_box_num; i ++ ) {
-            		antibioticA.addQuantity( 0, i, 0, conc * sim.getDt() );
-            		antibioticB.addQuantity( 0, i, 0, conc * sim.getDt() );
-            	}
-        	}
-        }
-        
-        // Uniformly increase the toxin concentration in the simulation
-        if ( toxin_condition == UNIFORM ) {
-        	if ( delayCountA == delayA ) {
-        		//antibioticA.fill(0, toxin_increment_A * sim.getDt(), toxin_increment_A * sim.getDt());
-        		antibioticA.fillArea(toxin_increment_A, initial_conc);
-        		delayCountA = 0;
-        	}
-        	else {
-        		delayCountA ++;
-        	}
-        	
-        	if ( delayCountB == delayB ) {
-        		//antibioticB.fill(0, toxin_increment_B * sim.getDt(), toxin_increment_B * sim.getDt());
-        		antibioticB.fillArea(toxin_increment_B, initial_conc);
-        		delayCountB = 0;
-        	}
-        	else {
-        		delayCountB ++;
-        	}
-			
-        }
-
-        // Update the antibiotic field
-        antibioticA.update(); 
-        antibioticB.update();
+        // Update the amino acid field
+        amino_acid_A.update(); 
+        amino_acid_B.update();
 
         endTimeAction = System.nanoTime();
         if((sim.getTimestep() % LOG_INTERVAL) == 0) {

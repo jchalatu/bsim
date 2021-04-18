@@ -1,4 +1,4 @@
-package BSimPhageField;
+package BSimCrossFeeding;
 
 import bsim.BSim;
 import bsim.BSimChemicalField;
@@ -11,24 +11,30 @@ import processing.core.PGraphics3D;
 import java.awt.*;
 import java.util.ArrayList;
 
-public class BasicDrawer extends BSimP3DDrawer{
+public class CrossFeedingDrawer extends BSimP3DDrawer{
 
     // Bacterium should be a sub-class of BSimCapsuleBacterium
-    final ArrayList<PhageFieldBacterium> bac;
+    final ArrayList<CrossFeedingBacterium> bacA;
+    final ArrayList<CrossFeedingBacterium> bacB;
     final double simX;
     final double simY;
     
-    public static BSimChemicalField field;
+    public static BSimChemicalField amino_acid_A;
+    public static BSimChemicalField amino_acid_B;
     public static double c; 
 
-    public BasicDrawer(BSim sim, int width_pixels, int height_pixels, double pixel_to_um_ratio, 
-    		ArrayList<PhageFieldBacterium> bac_to_draw, BSimChemicalField field, double c) {
+    public CrossFeedingDrawer(BSim sim, int width_pixels, int height_pixels, double pixel_to_um_ratio, 
+    		ArrayList<CrossFeedingBacterium> bac_to_drawA, ArrayList<CrossFeedingBacterium> bac_to_drawB,
+    		BSimChemicalField amino_acid_A, BSimChemicalField amino_acid_B, double c) {
         super(sim, width_pixels, height_pixels);
         simX = width_pixels / pixel_to_um_ratio;
         simY = height_pixels / pixel_to_um_ratio;
-        bac = bac_to_draw;
-        BasicDrawer.field = field;
-        BasicDrawer.c = c;
+        bacA = bac_to_drawA;
+        bacB = bac_to_drawB;
+        
+        CrossFeedingDrawer.amino_acid_A = amino_acid_A;
+        CrossFeedingDrawer.amino_acid_B = amino_acid_B;
+        CrossFeedingDrawer.c = c;
     }
 
     /**
@@ -90,13 +96,19 @@ public class BasicDrawer extends BSimP3DDrawer{
         p3d.ambientLight(128, 128, 128);
         p3d.directionalLight(128, 128, 128, 1, 1, -1);
         
-		// Draw the phage field
-        draw2D(field, Color.BLUE, (float)(255/c));	
+		// Draw the amino acid field
+        draw2D(amino_acid_A, Color.BLUE, (float)(255/c));	
+        draw2D(amino_acid_B, Color.RED, (float)(255/c));	
 		
-		// Draw the infected bacteria in red and the non-infected bacteria in green
-		for(PhageFieldBacterium b : bac) {
-			draw(b, b.isInfected() ? Color.RED : Color.GREEN);
-		}		
+		// Draw sub-population A
+		for(CrossFeedingBacterium b : bacA) {
+			draw(b, Color.GREEN );
+		}	
+		
+		// Draw sub-population B
+		for(CrossFeedingBacterium b : bacB) {
+			draw(b, Color.ORANGE );
+		}	
 
     }
 }

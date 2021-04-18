@@ -11,7 +11,7 @@ import processing.core.PGraphics3D;
 import java.awt.*;
 import java.util.ArrayList;
 
-public class BasicDrawer extends BSimP3DDrawer{
+public class CrossProtectionDrawer extends BSimP3DDrawer{
 
     // Bacterium should be a sub-class of BSimCapsuleBacterium
     final ArrayList<CrossProtectionBacterium> bacA;
@@ -35,7 +35,7 @@ public class BasicDrawer extends BSimP3DDrawer{
     final int CHECKER_BOARD = 1;
     final int MIXED_CONC = 2;
     
-    public BasicDrawer(BSim sim, double simX, double simY, int window_width, int window_height,
+    public CrossProtectionDrawer(BSim sim, double simX, double simY, int window_width, int window_height,
     		ArrayList<CrossProtectionBacterium> bac_to_drawA, ArrayList<CrossProtectionBacterium> bac_to_drawB,
     		ChemicalField antibioticA, ChemicalField antibioticB, double c, boolean TWO_SCREENS, int SINGLE_SCREEN) {
         super(sim, window_width, window_height);
@@ -46,9 +46,9 @@ public class BasicDrawer extends BSimP3DDrawer{
         bacA = bac_to_drawA;
         bacB = bac_to_drawB;
         
-        BasicDrawer.antibioticA = antibioticA;
-        BasicDrawer.antibioticB = antibioticB;
-        BasicDrawer.c = c;
+        CrossProtectionDrawer.antibioticA = antibioticA;
+        CrossProtectionDrawer.antibioticB = antibioticB;
+        CrossProtectionDrawer.c = c;
         this.TWO_SCREENS = TWO_SCREENS;
         this.SINGLE_SCREEN = SINGLE_SCREEN;
     }

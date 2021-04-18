@@ -158,7 +158,7 @@ public class BSimPhageField {
 				Math.random()*sim.getBound().y, 
 				Math.random()*sim.getBound().z);
 	
-        double r = BSimCapsuleBacterium.L_th * Math.sqrt(Math.random());
+        double r = div_mean * Math.sqrt(Math.random());
         double theta = Math.random() * 2 * Math.PI;
         Vector3d pos2 = new Vector3d(pos1.x + r * Math.cos(theta), 
 				pos1.y + r * Math.sin(theta), 
@@ -319,7 +319,7 @@ public class BSimPhageField {
          * Set up the ticker
          */
         final int LOG_INTERVAL = 100; 			// logs data every 100 timesteps
-        BasicTicker ticker = new BasicTicker(sim, bac, bacteriaAll, LOG_INTERVAL, bacRng, el_stdv, el_mean,
+        PhageFieldTicker ticker = new PhageFieldTicker(sim, bac, bacteriaAll, LOG_INTERVAL, bacRng, el_stdv, el_mean,
                 div_stdv, div_mean, field, field_box_num);
         ticker.setGrowth(WITH_GROWTH);			// enables bacteria growth
         ticker.setFlow(FLOW_IN);				// enables flow in of phage from boundary
@@ -328,7 +328,7 @@ public class BSimPhageField {
         /*********************************************************
          * Set up the drawer
          */
-        BasicDrawer drawer = new BasicDrawer(sim, width_pixels, height_pixels, pixel_to_um_ratio, bac,
+        PhageFieldDrawer drawer = new PhageFieldDrawer(sim, width_pixels, height_pixels, pixel_to_um_ratio, bac,
         		field, c);
         sim.setDrawer(drawer);
         

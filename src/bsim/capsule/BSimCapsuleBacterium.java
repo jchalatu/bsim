@@ -59,7 +59,7 @@ public class BSimCapsuleBacterium {
     public double L_max = 15*L_initial;
 
     // how long the bacterium must be before there it divides
-    public static double L_th = 7; //make sure L_max is greater than L_th, default is 7
+    public double L_th = 7; //make sure L_max is greater than L_th, default is 7
 
     // growth rate of bacterium -> increases length each second
     public double k_growth = 0.02;
@@ -325,7 +325,7 @@ public class BSimCapsuleBacterium {
             theForce.scaleAdd(0.4*k_wall*Math.pow(radius + pointCoord - simBound, 2.5), forceDir, theForce);
         }
     }
-	
+
     /*
     COMMENT ADDED BY ORIGINAL AUTHOR
     TODO - need proper wall contact location computation to implement flow past.
