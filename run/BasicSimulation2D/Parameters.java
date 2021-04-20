@@ -7,21 +7,25 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Parameters {
+    // Simulation Time
+    @Parameter(names="-simt",arity=1,description = "simulation time")
+    public static double sim_time = 2.0;
+    @Parameter(names="-simdt",arity=1,description = "simulation time step")
+    public static double sim_dt = 0.01;
+
     // @parameter means an optional user-specified value in the command line
     // export mode means output appears
     @Parameter(names = "-export", description = "Enable export mode.")
-    public boolean export = false;
+    public boolean export = true;
 
-    // image dimension in pixels
-    @Parameter(names = "-dim", arity = 2, description = "The dimensions (x, y) of image in pixels.")
-    //public List<Integer> imageDimensions = new ArrayList<>(Arrays.asList(new Integer[]{400, 400}));
-    public int[] imageDimensions = {800, 800};
+    @Parameter(names="-export_time",arity=1,description = "export time")
+    public static double export_time = 0.5;// Previously was 10, and simulation time was 100
 
-    /*
     //set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
-    public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[]{198.0, 159.0, 1.}));
-     */
+    //public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[]{198.0, 159.0, 1.0}));
+    //public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[]{1870 / 13.89, 2208 / 13.89, 1.0}));
+    public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[]{400 / 13.89, 400 / 13.89, 1.0}));
 
     // pixel to um scaling: the images are a bit more than 2000 pixels wide, while the simulation is rougly 200 micrometers
     // so the conversion factor ends up being 13.89
@@ -49,17 +53,48 @@ public class Parameters {
     @Parameter(names = "-ratio", arity = 1, description = "Ratio of initial populations (proportion of activators).")
     public double populationRatio = 0.0;
 
+
     //growth rate standard deviation
-    @Parameter(names = "-gr_stdv", arity = 1, description = "growth rate standard deviation")
-    public static double growth_stdv = 0.2;
-    //growth rate mean
-    @Parameter(names = "-gr_mean", arity = 1, description = "growth rate mean")
-    public static double growth_mean = 2.1;
+    @Parameter(names="-el_stdv",arity=1,description = "elongation rate standard deviation")
+    public static double el_stdv = 0.2;//0.277;
+    @Parameter(names="-el_mean",arity=1,description = "elongation rate mean")
+    public static double el_mean = 2.0;//1.23;
 
     //elongation threshold standard deviation
-    @Parameter(names = "-len_stdv", arity = 1, description = "elongation threshold standard deviation")
-    public static double length_stdv = 0.1;
+    @Parameter(names="-div_stdv",arity=1,description = "elongation threshold standard deviation")
+    public static double div_stdv = 0.1;
     //elongation threshold mean
-    @Parameter(names = "-len_mean", arity = 1, description = "elongation threshold mean")
-    public static double length_mean = 7.0;
+    @Parameter(names="-div_mean",arity=1,description = "elongation threshold mean")
+    public static double div_mean = 7.0;
+
+    // internal force
+    @Parameter(names="-k_int",arity=1,description = "internal force")
+    public static double k_int = 50.0;
+    // cell-cell collision force
+    @Parameter(names="-k_cell",arity=1,description = "cell-cell collision force")
+    public static double k_cell = 500.0;
+    // sticking force
+    @Parameter(names="-k_stick",arity=1,description = "side-to-side attraction")
+    public static double k_sticking = 0.01;
+
+    // sticking range
+    @Parameter(names="-rng_stick",arity=1,description = "max range side-to-side attraction")
+    public static double range_sticking = 5.0;
+
+    // twist
+    @Parameter(names="-twist",arity=1,description = "twist")
+    public static double twist = 0.1;
+    // push
+    @Parameter(names="-push",arity=1,description = "push")
+    public static double push = 0.05;
+
+    // asymmetric growth threshold
+    @Parameter(names="-l_asym",arity=1,description = "asymmetric growth threshold")
+    public static double L_asym = 3.75;
+    // value of asymmetry
+    @Parameter(names="-asym",arity=1,description = "asymmetry")
+    public static double asymmetry = 0.1;
+    // symmetric growth
+    @Parameter(names="-sym",arity=1,description = "symmetric growth")
+    public static double sym_growth = 0.05;
 }

@@ -69,8 +69,8 @@ public class BSimCapsuleBacterium {
 
     // Spring constants
     public static double k_int = 50.0;     		// internal force (5e-5 from Storck)
-    public static double k_wall = 50.0 * 10;   			// overlap with wall
-    public static double k_cell = 50.0 * 10;   			// overlapping cells (1e-4 from Storck)
+    public static double k_wall = 500.0;   			// overlap with wall
+    public static double k_cell = 500.0;   			// overlapping cells (1e-4 from Storck)
     public static double k_filial = 5e-7;			// end to end attraction
     public static double k_longfilial = 5e-7;		// opposite end repulsion when filial is active
     public static double k_sticking = 0.01/*10.0*/;   		// side to side attraction
@@ -141,13 +141,13 @@ public class BSimCapsuleBacterium {
     }
 
     /** Sets the value of the internal force. **/
-    public void setIntForce(double k_int) { k_int = k_int; }
+    public static void setIntForce(double k_int) { BSimCapsuleBacterium.k_int = k_int; }
     /** Sets the value of the cell-cell collision force. **/
-    public void setCellForce(double k_cell) {this.k_cell = k_cell; }
+    public static void setCellForce(double k_cell) { BSimCapsuleBacterium.k_cell = k_cell; }
     /** Sets the sticking force. **/
-    public void setStickForce(double k_sticking) { this.k_sticking = k_sticking; }
+    public static void setStickForce(double k_sticking) { BSimCapsuleBacterium.k_sticking = k_sticking; }
     /** Sets the range of the sticking force. **/
-    public void setStickingRange(double range_sticking) {this.range_sticking = range_sticking; }
+    public static void setStickingRange(double range_sticking) {BSimCapsuleBacterium.range_sticking = range_sticking; }
 
     public double stokesCoefficient() { return 6.0*Math.PI*radius*sim.getVisc(); } // micrometers*Pa sec
 

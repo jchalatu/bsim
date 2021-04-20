@@ -1,6 +1,7 @@
 package BSimPhageField;
 
-import bsim.BSim;   
+import bsim.winter2021.CellProfilerLogger;
+import bsim.BSim;
 
 import bsim.BSimChemicalField;
 import bsim.BSimUtils;
@@ -105,14 +106,14 @@ public class BSimPhageField {
     public static double k_int = 50.0;
     // cell-cell collision force
     @Parameter(names="-k_cell",arity=1,description = "cell-cell collision force")
-    public static double k_cell = 50.0;
+    public static double k_cell = 500.0;
     // sticking force
     @Parameter(names="-k_stick",arity=1,description = "side-to-side attraction")
-    public static double k_sticking = 10.0;
+    public static double k_sticking = 0.01;
     
     // sticking range
     @Parameter(names="-rng_stick",arity=1,description = "max range side-to-side attraction")
-    public static double range_sticking = 0.6;
+    public static double range_sticking = 5.0;
     
     // twist
     @Parameter(names="-twist",arity=1,description = "twist")
@@ -335,7 +336,7 @@ public class BSimPhageField {
         /*********************************************************
          * Export data
          */
-        if(export) {
+        if(false) {
             String simParameters = "" + BSimUtils.timeStamp() + "__dim_" + simX + "_" + simY + "_" + simZ
                     + "__ip_" + initialPopulation
                     + "__pr_" + populationRatio;
@@ -459,9 +460,17 @@ public class BSimPhageField {
             /**
              * Export a csv file to save information about infection
              */
-            PhageFieldLogger logger = new PhageFieldLogger(sim, filePath + "BSim_Simulation.csv", bac, pixel_to_um_ratio);
-            logger.setDt(sim.getDt());			// Set export time step
-            sim.addExporter(logger);
+            //PhageFieldLogger logger = new PhageFieldLogger(sim, filePath + "BSim_Simulation.csv", bac, pixel_to_um_ratio);
+            //logger.setDt(sim.getDt());			// Set export time step
+            //sim.addExporter(logger);
+
+            /** Export a csv file that matches CellProfiler's output */
+            CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "BSim_Simulation.csv", bac, pixel_to_um_ratio);
+            // Set export time step, should be the same as sim.dt for the TrackObjects_fields to be correct
+            // This is because division events are identified by a lifetime of 0, and lifetime increments are based on on sim.dt
+            // (Lifetime could be converted to be in terms of cp_logger.dt if we use a multiple of sim.dt)
+            cp_logger.setDt(sim.getDt());
+            sim.addExporter(cp_logger);
 
             sim.export();
 

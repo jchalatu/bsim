@@ -65,16 +65,16 @@ public class Bacterium extends BSimCapsuleBacterium {
     }
     
     /** Sets the value for asymmetric growth threshold. **/
-    public void setLAsym(double length) {L_asym = length;}
+    public static void setLAsym(double length) { L_asym = length; }
     /** Sets the value of asymmetry. **/
-    public void setAsym(double a) { asymmetry = a; }
+    public static void setAsym(double a) { asymmetry = a; }
     /** Sets the value of symmetric growth. **/
-    public void setSym(double s) { symmetry_adjustment = s; }
+    public static void setSym(double s) { symmetry_adjustment = s; }
     
     /** Sets the value of the twist during division. **/
-    public void setTwist(double t) {this.twist = t;}
+    public static void setTwist(double t) { Bacterium.twist = t; }
     /** Sets the value of the push during division. **/
-    public void setPush(double p) {this.push = p;}
+    public static void setPush(double p) { Bacterium.push = p; }
     
 	@Override
     // Function which computes the internal spring force acting on the endpoints of the cell

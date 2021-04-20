@@ -5,140 +5,18 @@ import bsim.BSimUtils;
 import bsim.capsule.BSimCapsuleBacterium;
 import bsim.export.BSimPngExporter;
 import bsim.export.BSimMovExporter;
-import bsim.winter2021.Bacterium;
+import bsim.winter2021.*;
 
 import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
 
 import javax.vecmath.Vector3d;
 import java.io.*;
 import java.util.*;
-import java.util.List;
 
 
 // Winter 2021 Project
 // Growth experiments from Winter 2021
-
 public class BasicSimulation2D {
-    /*
-    // Sohaib Nadeem
-    // pixel to um scaling: the images are a bit more than 2000 pixels wide, while the simulation is rougly 200 micrometers
-    // so the conversion factor ends up being 13.89
-    static final double pixel_to_um_ratio = 13.89;
-    final int width_pixels = 400;
-    final int height_pixels = 400;
-    final double width_um = width_pixels / pixel_to_um_ratio; // should be kept as constants for cell prof.
-    final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
-
-    // @parameter means an optional user-specified value in the command line
-    // export mode means output appears
-    @Parameter(names = "-export", description = "Enable export mode.")
-    private boolean export = true;
-
-    //set dimnesions in um
-    @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
-    public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[]{width_um, height_um, 1.}));
-
-    // Boundaries
-    //Boolean flag: specifies whether any walls are needed
-    @Parameter(names = "-fixedbounds", description = "Enable fixed boundaries. (If not, one boundary will be leaky as real uf chamber).")
-    private boolean fixedBounds = true;
-
-    // Grid ->
-    // 52x42 -> 546
-    // 100x86 -> 2150
-    // Random:
-    // 50x42 -> 250
-    // 100x85 -> 1000
-    // Density (cell number)
-    //optional call to a default initial set of cells
-    @Parameter(names = "-pop", arity = 1, description = "Initial seed population (n_total).")
-    public int initialPopulation = 10;
-
-    // A:R ratio
-    // for default set of cells, set ratio of two subpopulations
-    @Parameter(names = "-ratio", arity = 1, description = "Ratio of initial populations (proportion of activators).")
-    public double populationRatio = 0.0;
-
-    //growth rate standard deviation
-    @Parameter(names="-el_stdv",arity=1,description = "elongation rate standard deviation")
-    public static double el_stdv = 0.2;//0.277;
-    @Parameter(names="-el_mean",arity=1,description = "elongation rate mean")
-    public static double el_mean = 2.1;//1.23;
-
-    //elongation threshold standard deviation
-    @Parameter(names="-div_stdv",arity=1,description = "elongation threshold standard deviation")
-    public static double div_stdv = 0.1;
-    //elongation threshold mean
-    @Parameter(names="-div_mean",arity=1,description = "elongation threshold mean")
-    public static double div_mean = 7.0;
-
-    // Simulation Time
-    @Parameter(names="-simt",arity=1,description = "simulation time")
-    public static double sim_time = 5.0;
-    @Parameter(names="-simdt",arity=1,description = "simulation time step")
-    public static double sim_dt = 0.05;
-    @Parameter(names="-export_time",arity=1,description = "export time")
-    public static double export_time = 0.5;// Previously was 10, and simulation time was 100
-
-    // internal force
-    @Parameter(names="-k_int",arity=1,description = "internal force")
-    public static double k_int = 50.0;
-    // cell-cell collision force
-    @Parameter(names="-k_cell",arity=1,description = "cell-cell collision force")
-    public static double k_cell = 50.0;
-    // sticking force
-    @Parameter(names="-k_stick",arity=1,description = "side-to-side attraction")
-    public static double k_sticking = 10.0;
-
-    // sticking range
-    @Parameter(names="-rng_stick",arity=1,description = "max range side-to-side attraction")
-    public static double range_sticking = 0.6;
-
-    // twist
-    @Parameter(names="-twist",arity=1,description = "twist")
-    public static double twist = 0.1;
-    // push
-    @Parameter(names="-push",arity=1,description = "push")
-    public static double push = 0.05;
-
-    // asymmetric growth threshold
-    @Parameter(names="-l_asym",arity=1,description = "asymmetric growth threshold")
-    public static double L_asym = 3.75;
-    // value of asymmetry
-    @Parameter(names="-asym",arity=1,description = "asymmetry")
-    public static double asymmetry = 0.1;
-    // symmetric growth
-    @Parameter(names="-sym",arity=1,description = "symmetric growth")
-    public static double sym_growth = 0.05;
-     */
-
-    /**
-     * Whether to enable growth in the ticker etc. or not...
-     */
-    // if false nothing can grow
-    private static final boolean WITH_GROWTH = true;
-
-    static Random bacRng;
-
-    /*
-    // this is the very first function that runs in the simulation
-    // this runs the simulation
-    public static void main(String[] args) {
-
-        // creates new simulation data object
-        // intializing storage unit for simualation
-        BasicSimulation2D bsim_ex = new BasicSimulation2D();
-
-        // starts up JCommander which allows you to read options from the command line more easily
-        // command line stuff
-        new JCommander(bsim_ex, args);
-
-        // begins simulation
-        bsim_ex.run();
-    }
-     */
-
     // this is the very first function that runs in the simulation
     // this runs the simulation
     public static void main(String[] args) {
@@ -232,41 +110,46 @@ public class BasicSimulation2D {
     // |----> Saves images of simulation
     public static void run(Parameters parameters) {
         boolean export = parameters.export;
-        int[] imageDimensions = parameters.imageDimensions;
+        List<Double> simDimensions = parameters.simDimensions;
         boolean fixedBounds = parameters.fixedBounds;
         int initialPopulation = parameters.initialPopulation;
         double populationRatio = parameters.populationRatio;
-        double growth_stdv = parameters.growth_stdv;
-        double growth_mean = parameters.growth_mean;
-        double length_stdv = parameters.length_stdv;
-        double length_mean = parameters.length_mean;
+        double el_stdv = parameters.el_stdv;
+        double el_mean = parameters.el_mean;
+        double div_stdv = parameters.div_stdv;
+        double div_mean = parameters.div_mean;
+        double sim_time = parameters.sim_time;;
+        double sim_dt = parameters.sim_dt;
 
+        double export_time = parameters.export_time;
+        double k_int = parameters.k_int;
+        double k_cell = parameters.k_cell;
+        double k_sticking = parameters.k_sticking;
+        double range_sticking = parameters.range_sticking;
+        double twist = parameters.twist;
+        double push = parameters.push;
+        double L_asym = parameters.L_asym;
+        double asymmetry = parameters.asymmetry;
+        double sym_growth = parameters.sym_growth;
 
         // Assigns the specified forces, range, and impulses
-        bacterium.setIntForce(k_int);
-        bacterium.setCellForce(k_cell);
-        bacterium.setStickForce(k_sticking);
-        bacterium.setStickingRange(range_sticking);
-        bacterium.setTwist(twist);
-        bacterium.setPush(push);
+        BSimCapsuleBacterium.setIntForce(k_int);
+        BSimCapsuleBacterium.setCellForce(k_cell);
+        BSimCapsuleBacterium.setStickForce(k_sticking);
+        BSimCapsuleBacterium.setStickingRange(range_sticking);
 
-        bacterium.setLAsym(L_asym);
-        bacterium.setAsym(asymmetry);
-        bacterium.setSym(sym_growth);
+        Bacterium.setTwist(twist);
+        Bacterium.setPush(push);
+        Bacterium.setLAsym(L_asym);
+        Bacterium.setAsym(asymmetry);
+        Bacterium.setSym(sym_growth);
 
         final double pixel_to_um_ratio = parameters.pixel_to_um_ratio;
-        final int width_pixels = parameters.imageDimensions[0];
-        final int height_pixels = parameters.imageDimensions[1];
-        final double width_um = width_pixels / pixel_to_um_ratio; // should be kept as constants for cell prof.
-        final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
 
         // initializes simulation domain size
-        //final double simX = simDimensions.get(0);
-        //final double simY = simDimensions.get(1);
-        //final double simZ = simDimensions.get(2);
-        final double simX = width_um;
-        final double simY = height_um;
-        final double simZ = 1.0;
+        final double simX = simDimensions.get(0);
+        final double simY = simDimensions.get(1);
+        final double simZ = simDimensions.get(2);
 
         // saves the exact time when the simulation started, real wall clock time
         long simulationStartTime = System.nanoTime();
@@ -282,9 +165,9 @@ public class BasicSimulation2D {
         // Boundaries periodicity: true means walls, false means periodic
         sim.setSolid(true, true, true);
 
-        // Leaky -> bacteria can escape from sides of six faces of the box. only useable if fixedbounds allows it
-        // leaky means completely open
-        // leakyrate is for small molecules, not quite sure what this does
+        // Leaky -> chemicals can escape from sides of six faces of the box, only usable if fixedBounds is false
+        // leaky means completely open (only the boundaries in the x and y dimensions)
+        // leakyRate is for small molecules, not quite sure what this does
         if (!fixedBounds) {
             sim.setLeaky(true, true, true, true, false, false);
             sim.setLeakyRate(0.1 / 60.0, 0.1 / 60.0, 0.1 / 60.0, 0.1 / 60.0, 0, 0);
@@ -301,7 +184,7 @@ public class BasicSimulation2D {
         // A general class, no sub-population specifics
         final ArrayList<BSimCapsuleBacterium> bacteriaAll = new ArrayList();
 
-        bacRng = new Random(); //random number generator
+        Random bacRng = new Random(); //random number generator
         bacRng.setSeed(50); // initializes random number generator
 
         // gets the location of the file that is currently running
@@ -309,10 +192,10 @@ public class BasicSimulation2D {
         String systemPath = new File("").getAbsolutePath() + "\\SingleCellSims";
 
         String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\twocellssidebyside2-400by400.csv";
-        RawReader reader = new RawReader(initial_data_path, pixel_to_um_ratio);
+        RawReader reader = new RawReader(pixel_to_um_ratio);
         //String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\MyExpt_IdentifyPrimaryObjects.csv";
-        //CellProfilerReader reader = new CellProfilerReader(initial_data_path, pixel_to_um_ratio, 1);
-        ArrayList<double[]> cell_endpoints = reader.readcsv();
+        //CellProfilerReader reader = new CellProfilerReader(pixel_to_um_ratio, 1);
+        ArrayList<double[]> cell_endpoints = reader.readcsv(initial_data_path);
         for(int i = 0; i < cell_endpoints.size(); i++) {//double[] cell : cell_endpoints) {
             double[] cell = cell_endpoints.get(i);
             // initializes the endpoints of each bacterium from the array of endpoints; z-dimension is 0.5
@@ -335,14 +218,14 @@ public class BasicSimulation2D {
         final int LOG_INTERVAL = 100; // logs data every 100 timesteps
         BasicTicker ticker = new BasicTicker(sim, bac, bacteriaAll, LOG_INTERVAL, bacRng, el_stdv, el_mean,
                 div_stdv, div_mean);
-        ticker.setGrowth(WITH_GROWTH);
+        ticker.setGrowth(true); // whether to enable growth in the ticker or not; if false nothing can grow
         sim.setTicker(ticker);
 
         // the rest of the code is the drawer (makes simulation images) and data logger (makes csv files)
         /*********************************************************
          * Set up the drawer
          */
-        BasicDrawer drawer = new BasicDrawer(sim, width_pixels, height_pixels, pixel_to_um_ratio, bac);
+        BasicDrawer drawer = new BasicDrawer(sim, 800, 600, pixel_to_um_ratio, bac);
         sim.setDrawer(drawer);
 
         /*********************************************************
@@ -362,28 +245,8 @@ public class BasicSimulation2D {
             String filePath = BSimUtils.generateDirectoryPath(systemPath + "/" + simParameters + "/");
 //            String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
 
-            double export_time = 0.5; // was 10, and simulation time was 100 - Sohaib Nadeem
 
-            /**
-             * Export a rendered image file
-             */
-            //BSimLogger metaLogger = new BSimLogger(sim, filePath + "simInfo.txt");
-            //metaLogger.setDt(export_time);//3600);			// Set export time step
-            //sim.addExporter(metaLogger);
-            //BSimLogger posLogger = new BSimLogger(sim, filePath + "position.csv");
-            //posLogger.setDt(export_time);			// set export time step for csv file
-            //sim.addExporter(posLogger);
-            //BSimLogger sumLogger = new BSimLogger(sim, filePath + "summary.csv");
-            //sumLogger.setDt(export_time);			// Set export time step
-            //sim.addExporter(sumLogger);
-
-            BSimPngExporter imageExporter = new BSimPngExporter(sim, drawer, filePath);
-            imageExporter.setDt(export_time); //this is how often it will output a frame
-            // separate time-resolution for images vs excel file
-            sim.addExporter(imageExporter);
-
-
-            // Export a csv file that matches CellProfiler's output
+            /** Export a csv file that matches CellProfiler's output */
             CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv", bac, pixel_to_um_ratio);
             // Set export time step, should be the same as sim.dt for the TrackObjects_fields to be correct
             // This is because division events are identified by a lifetime of 0, and lifetime increments are based on on sim.dt
@@ -391,10 +254,30 @@ public class BasicSimulation2D {
             cp_logger.setDt(sim.getDt());
             sim.addExporter(cp_logger);
 
-            //Export a video of the simulation
+            /*
+            MetaLogger metaLogger = new MetaLogger(sim, filePath + "simInfo.txt", parameters, bac.size());
+            metaLogger.setDt(export_time);			// Set export time step
+            sim.addExporter(metaLogger);
+
+            PositionLogger posLogger = new PositionLogger(sim, filePath + "position.csv", bacteriaAll);
+            posLogger.setDt(export_time);			// set export time step for csv file
+            sim.addExporter(posLogger);
+
+            SummaryLogger sumLogger = new SummaryLogger(sim, filePath + "summary.csv", bacteriaAll);
+            sumLogger.setDt(export_time);			// Set export time step
+            sim.addExporter(sumLogger);
+             */
+
+            /** Export a rendered image file */
+            BSimPngExporter imageExporter = new BSimPngExporter(sim, drawer, filePath);
+            imageExporter.setDt(export_time); //this is how often it will output a frame
+            // separate time-resolution for images vs excel file
+            sim.addExporter(imageExporter);
+
+            /** Export a video of the simulation */
             BSimMovExporter videoExporter = new BSimMovExporter(sim, drawer, filePath + "video.mp4" );
             videoExporter.setSpeed(1); // the number of simulation time units played in one second
-            videoExporter.setDt(0.05); // this is how often (in simulation time) it will output a frame for the video
+            videoExporter.setDt(0.01); // this is how often (in simulation time) it will output a frame for the video
             sim.addExporter(videoExporter);
 
             sim.export();

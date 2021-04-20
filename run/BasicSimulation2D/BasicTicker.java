@@ -6,7 +6,6 @@ import bsim.capsule.BSimCapsuleBacterium;
 import bsim.capsule.Mover;
 import bsim.capsule.RelaxationMoverGrid;
 import bsim.winter2021.Bacterium;
-import com.beust.jcommander.Parameter;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -54,14 +53,14 @@ public class BasicTicker extends BSimTicker {
     /** Sets the flag for growth. **/
     public void setGrowth(boolean b) { WITH_GROWTH = b; }
 
-    // This one is a bit long too. Let's break it up
-    // 1. Begins an "action" -> this represents one timestep
-    // 2. Tells each bacterium to perform their action() function
-    // 3. Updates each chemical field in the simulation
-    // 4. Bacteria are then told to grow()
-    // 5. bacteria which are longer than their threshold are told to divide()
-    // 6. forces are applied and bacteria move around
-    // 7. bacteria which are out of bounds are removed from the simulation
+    // 1. update lifetimes
+    // 2. Begins an "action" -> this represents one timestep
+    // 3. Tells each bacterium to perform their action() function
+    // 4. Updates each chemical field in the simulation
+    // 5. Bacteria are then told to grow()
+    // 6. bacteria which are longer than their threshold are told to divide()
+    // 7. forces are applied and bacteria move around
+    // 8. bacteria which are out of bounds are removed from the simulation
     @Override
     public void tick() {
         // increase lifetimes of cells
