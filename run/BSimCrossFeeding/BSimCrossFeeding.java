@@ -43,6 +43,9 @@ public class BSimCrossFeeding {
     // export mode means output appears
     @Parameter(names = "-export", description = "Enable export mode.")
     private boolean export = false;
+
+    @Parameter(names = "-export_path", description = "export location")
+    private String export_path = "default";
     
     @Parameter(names = "-grow", description = "Enable bacteria growth.")
     private boolean WITH_GROWTH = true;
@@ -328,8 +331,13 @@ public class BSimCrossFeeding {
                 simParameters += "__leakyBounds";
             }
 
-            String filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
-//            String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
+            String filePath;
+            if(export_path == "default") {
+                filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
+                //String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
+            } else {
+                filePath = BSimUtils.generateDirectoryPath(export_path + "/");
+            }
 
             /*********************************************************
              * Various properties of the simulation, for future reference.

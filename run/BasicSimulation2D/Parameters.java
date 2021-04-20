@@ -18,6 +18,9 @@ public class Parameters {
     @Parameter(names = "-export", description = "Enable export mode.")
     public boolean export = true;
 
+    @Parameter(names = "-export_path", description = "export location")
+    public String export_path = "default";
+
     @Parameter(names="-export_time",arity=1,description = "export time")
     public static double export_time = 0.5;// Previously was 10, and simulation time was 100
 

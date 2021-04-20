@@ -8,6 +8,7 @@ import bsim.export.BSimMovExporter;
 import bsim.winter2021.*;
 
 import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
 
 import javax.vecmath.Vector3d;
 import java.io.*;
@@ -110,6 +111,7 @@ public class BasicSimulation2D {
     // |----> Saves images of simulation
     public static void run(Parameters parameters) {
         boolean export = parameters.export;
+        String export_path = parameters.export_path;
         List<Double> simDimensions = parameters.simDimensions;
         boolean fixedBounds = parameters.fixedBounds;
         int initialPopulation = parameters.initialPopulation;
@@ -242,8 +244,13 @@ public class BasicSimulation2D {
                 simParameters += "__leakyBounds";
             }
 
-            String filePath = BSimUtils.generateDirectoryPath(systemPath + "/" + simParameters + "/");
-//            String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
+            String filePath;
+            if(export_path == "default") {
+                filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
+                //String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
+            } else {
+                filePath = BSimUtils.generateDirectoryPath(export_path + "/");
+            }
 
 
             /** Export a csv file that matches CellProfiler's output */

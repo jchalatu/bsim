@@ -73,6 +73,9 @@ public class BSimCrossProtection {
     // export mode means output appears
     @Parameter(names = "-export", description = "Enable export mode.")
     private boolean export = false;
+
+    @Parameter(names = "-export_path", description = "export location")
+    private String export_path = "default";
     
     // Simulation setup parameters. Set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
@@ -361,8 +364,13 @@ public class BSimCrossProtection {
                 simParameters += "__leakyBounds";
             }
 
-            String filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
-//            String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
+            String filePath;
+            if(export_path == "default") {
+                filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
+                //String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
+            } else {
+                filePath = BSimUtils.generateDirectoryPath(export_path + "/");
+            }
             
             /*********************************************************
              * Various properties of the simulation, for future reference.
