@@ -120,14 +120,14 @@ public class BSimCrossProtection {
     public static double k_int = 50.0;
     // cell-cell collision force
     @Parameter(names="-k_cell",arity=1,description = "cell-cell collision force")
-    public static double k_cell = 50.0;
+    public static double k_cell = 500.0;
     // sticking force
     @Parameter(names="-k_stick",arity=1,description = "side-to-side attraction")
-    public static double k_sticking = 10.0;
+    public static double k_sticking = 0.01;
     
     // sticking range
     @Parameter(names="-rng_stick",arity=1,description = "max range side-to-side attraction")
-    public static double range_sticking = 0.6;
+    public static double range_sticking = 5.0;
     
     // twist
     @Parameter(names="-twist",arity=1,description = "twist")
