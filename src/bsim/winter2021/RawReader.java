@@ -1,8 +1,5 @@
-package BasicSimulation2D;
+package bsim.winter2021;
 
-import PhysModBsim.Bacterium;
-
-import javax.vecmath.Vector3d;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -14,9 +11,13 @@ public class RawReader {
     BufferedReader csvReader;
     final double pixel_to_um_ratio;
 
-    public RawReader(String filepath, double pixel_to_um_ratio) {
+    public RawReader(double pixel_to_um_ratio) {
         this.pixel_to_um_ratio = pixel_to_um_ratio;
+    }
 
+    // TODO: improve
+    // The csv file is closed after reading
+    public ArrayList<double[]> readcsv(String filepath) {
         try {
             // try reading the initial position file
             csvReader = new BufferedReader(new FileReader(filepath));
@@ -24,11 +25,7 @@ public class RawReader {
             // if that doesn't work, print out an error
             e.printStackTrace();
         }
-    }
 
-    // TODO: improve
-    // The csv file is closed after reading
-    public ArrayList<double[]> readcsv() {
         double[][] initEndpoints = new double[4][];
         ArrayList<double[]> initEndpoints_arrlist = new ArrayList();
 

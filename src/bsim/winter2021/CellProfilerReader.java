@@ -1,8 +1,5 @@
-package BasicSimulation2D;
+package bsim.winter2021;
 
-import PhysModBsim.Bacterium;
-
-import javax.vecmath.Vector3d;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -16,10 +13,12 @@ public class CellProfilerReader {
     int image_number = 1;
 
     // TODO: add exception when column names don't match
-    public CellProfilerReader(String filepath, double pixel_to_um_ratio, int image_number) {
+    public CellProfilerReader(double pixel_to_um_ratio, int image_number) {
         this.pixel_to_um_ratio = pixel_to_um_ratio;
         this.image_number = image_number;
+    }
 
+    public ArrayList<double[]> readcsv(String filepath) {
         try {
             // try reading the file
             csvReader = new BufferedReader(new FileReader(filepath));
@@ -35,14 +34,12 @@ public class CellProfilerReader {
             if(columns_names[0] != "ImageNumber" || columns_names[8] != "AreaShape_Center_X" ||
                     columns_names[9] != "AreaShape_Center_Y" || columns_names[16] != "AreaShape_MajorAxisLength" ||
                     columns_names[22] != "AreaShape_MinorAxisLength") {
-                // throw an exception
+                // throw an exception?
             }
         } catch(IOException e) {
             e.printStackTrace(); // if there is an error, this will just print out the message
         }
-    }
 
-    public ArrayList<double[]> readcsv() {
         ArrayList<double[]> initEndpoints = new ArrayList();
 
         try {
@@ -66,6 +63,7 @@ public class CellProfilerReader {
                             cell_center_x - (axis_x / 2), cell_center_y - (axis_y / 2)});
                 }
             }
+            csvReader.close(); //finally, close the file once all data is extracted
         } catch (IOException e) {
             e.printStackTrace(); // if there is an error, this will just print out the message
         }

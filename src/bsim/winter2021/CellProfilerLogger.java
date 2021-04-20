@@ -1,7 +1,6 @@
-package BasicSimulation2D;
+package bsim.winter2021;
 
 import bsim.BSim;
-import bsim.capsule.BSimCapsuleBacterium;
 import bsim.export.BSimLogger;
 import bsim.winter2021.Bacterium;
 
@@ -10,10 +9,10 @@ import java.util.ArrayList;
 
 public class CellProfilerLogger extends BSimLogger {
 
-    ArrayList<Bacterium> bac;
+    ArrayList<? extends Bacterium> bac;
     double pixel_to_um_ratio;
 
-    public CellProfilerLogger(BSim sim, String filename, ArrayList<Bacterium> bac, double pixel_to_um_ratio) {
+    public CellProfilerLogger(BSim sim, String filename, ArrayList<? extends Bacterium> bac, double pixel_to_um_ratio) {
         super(sim, filename);
         this.bac = bac;
         this.pixel_to_um_ratio = pixel_to_um_ratio;
