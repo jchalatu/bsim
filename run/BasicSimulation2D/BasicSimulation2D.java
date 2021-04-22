@@ -193,9 +193,9 @@ public class BasicSimulation2D {
         //specify output file path
         String systemPath = new File("").getAbsolutePath() + "\\SingleCellSims";
 
-        String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\twocellssidebyside2-400by400.csv";
+        String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\run\\initialization_data\\twocellssidebyside2-400by400.csv";
         RawReader reader = new RawReader(pixel_to_um_ratio);
-        //String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\examples\\PhysModBsim\\MyExpt_IdentifyPrimaryObjects.csv";
+        //String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\run\\initialization_data\\MyExpt_filtered_objects_2-1870by2208.csv";
         //CellProfilerReader reader = new CellProfilerReader(pixel_to_um_ratio, 1);
         ArrayList<double[]> cell_endpoints = reader.readcsv(initial_data_path);
         for(int i = 0; i < cell_endpoints.size(); i++) {//double[] cell : cell_endpoints) {
