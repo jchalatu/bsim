@@ -128,6 +128,7 @@
   <path id="bsim-bristol.module.sourcepath">
     <dirset dir="${module.bsim-bristol.basedir}">
       <include name="examples"/>
+      <include name="run"/>
       <include name="src"/>
       <include name="test"/>
     </dirset>
@@ -148,6 +149,10 @@
     
     <copy todir="${bsim-bristol.output.dir}">
       <fileset dir="${module.bsim-bristol.basedir}/examples">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+      <fileset dir="${module.bsim-bristol.basedir}/run">
         <patternset refid="compiler.resources"/>
         <type type="file"/>
       </fileset>
