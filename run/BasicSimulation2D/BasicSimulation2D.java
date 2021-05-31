@@ -112,6 +112,7 @@ public class BasicSimulation2D {
     public static void run(Parameters parameters) {
         boolean export = parameters.export;
         String export_path = parameters.export_path;
+        String input_data = parameters.input_data;
         List<Double> simDimensions = parameters.simDimensions;
         boolean fixedBounds = parameters.fixedBounds;
         int initialPopulation = parameters.initialPopulation;
@@ -122,7 +123,6 @@ public class BasicSimulation2D {
         double div_mean = parameters.div_mean;
         double sim_time = parameters.sim_time;;
         double sim_dt = parameters.sim_dt;
-
         double export_time = parameters.export_time;
         double k_int = parameters.k_int;
         double k_cell = parameters.k_cell;
@@ -158,7 +158,7 @@ public class BasicSimulation2D {
 
         // create the simulation object
         final BSim sim = new BSim();
-        sim.setDt(sim_dt);                    // set Simulation Timestep in time units
+        sim.setDt(sim_dt);
         sim.setSimulationTime(sim_time);      // specified in time units, could also specify a termination condition elsewhere
         sim.setTimeFormat("0.00");            // Time Format for display on images
         sim.setBound(simX, simY, simZ);       // Simulation domain Boundaries
@@ -191,12 +191,13 @@ public class BasicSimulation2D {
 
         // gets the location of the file that is currently running
         //specify output file path
-        String systemPath = new File("").getAbsolutePath() + "\\SingleCellSims";
 
-        String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\run\\initialization_data\\twocellssidebyside2-400by400.csv";
+        // TODO: FIX ALL OF THE HARDCODED PATHS!!
+        String systemPath = new File("").getAbsolutePath();
+
+        String initial_data_path = input_data;
         RawReader reader = new RawReader(pixel_to_um_ratio);
-        //String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\run\\initialization_data\\MyExpt_filtered_objects_2-1870by2208.csv";
-        //CellProfilerReader reader = new CellProfilerReader(pixel_to_um_ratio, 1);
+
         ArrayList<double[]> cell_endpoints = reader.readcsv(initial_data_path);
         for(int i = 0; i < cell_endpoints.size(); i++) {//double[] cell : cell_endpoints) {
             double[] cell = cell_endpoints.get(i);
@@ -254,7 +255,7 @@ public class BasicSimulation2D {
 
 
             /** Export a csv file that matches CellProfiler's output */
-            CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv", bac, pixel_to_um_ratio);
+            CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "BSim_Simulation.csv", bac, pixel_to_um_ratio);
             // Set export time step, should be the same as sim.dt for the TrackObjects_fields to be correct
             // This is because division events are identified by a lifetime of 0, and lifetime increments are based on on sim.dt
             // (Lifetime could be converted to be in terms of cp_logger.dt if we use a multiple of sim.dt)
