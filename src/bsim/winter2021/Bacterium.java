@@ -15,6 +15,7 @@ public class Bacterium extends BSimCapsuleBacterium {
     public final long origin_id;
     public long parent_id;
     public int lifetime;
+    public int generation;
 
     /** These fields are used to build a tree structure to keep track of lineage - Sohaib Nadeem */
     protected List<Bacterium> children;
@@ -26,7 +27,7 @@ public class Bacterium extends BSimCapsuleBacterium {
     public static double push = 0.05;
 
     /** Enables asymmetric growth. */
-    static boolean asymmetric_growth = false;
+    static boolean asymmetric_growth = true;
     /** Length threshold for asymmetric growth (um). */
 	static double L_asym = 3.75;
 	/** Allows the cell to grow asymmetrically. */
@@ -43,6 +44,7 @@ public class Bacterium extends BSimCapsuleBacterium {
         this.origin_id = id;
         this.parent_id = -1;
         lifetime = 0;
+        generation = 1;
 
         // initialize fields for lineage tree - Sohaib Nadeem
         children = new ArrayList<>();
@@ -58,24 +60,25 @@ public class Bacterium extends BSimCapsuleBacterium {
         this.origin_id = origin_id;
         this.parent_id = parent_id;
         lifetime = 0;
+        generation = 1;
 
         // initialize fields for lineage tree - Sohaib Nadeem
         children = new ArrayList<>();
         parent = null;
     }
-    
+
     /** Sets the value for asymmetric growth threshold. **/
     public static void setLAsym(double length) { L_asym = length; }
     /** Sets the value of asymmetry. **/
     public static void setAsym(double a) { asymmetry = a; }
     /** Sets the value of symmetric growth. **/
     public static void setSym(double s) { symmetry_adjustment = s; }
-    
+
     /** Sets the value of the twist during division. **/
     public static void setTwist(double t) { Bacterium.twist = t; }
     /** Sets the value of the push during division. **/
     public static void setPush(double p) { Bacterium.push = p; }
-    
+
 	@Override
     // Function which computes the internal spring force acting on the endpoints of the cell
     // We need the internal force to prevent the cell from lengthening as a result of forces acting individually
@@ -104,9 +107,10 @@ public class Bacterium extends BSimCapsuleBacterium {
 
             // Cell gradually starts growing symmetrically after the length threshold is met
             // and  as asym approaches 1.0
-            if (L >= L_asym && asymmetry <= 1.0) {
+            if (asymmetry <= 1.0) {
                 asymmetry += symmetry_adjustment * sim.getDt();
             }
+
 
             // Elongate asymmetrically until the length threshold is met
             // Internal potential is doubled to account for the x1force
@@ -146,7 +150,7 @@ public class Bacterium extends BSimCapsuleBacterium {
     public Bacterium divide() {
         Vector3d randomVec = new Vector3d(rng.nextDouble(), rng.nextDouble(), rng.nextDouble());
         randomVec.scale(twist);
-        System.out.println("Bacterium " + this.id + " is dividing...");
+        // System.out.println("Bacterium " + this.id + " is dividing...");
 
         Vector3d u = new Vector3d();
         u.sub(this.x2, this.x1);
@@ -167,7 +171,7 @@ public class Bacterium extends BSimCapsuleBacterium {
         Vector3d longVec = new Vector3d();
         longVec.scaleAdd(-1,this.x2,this.x1); 			// Push along bacterium length
         longVec.scale(push*rng.nextDouble()); 			// Push is applied to bacterium
-        
+
         // Impulse, not a force.
         longVec.add(randomVec);
         x2_new.add(longVec);
@@ -183,6 +187,9 @@ public class Bacterium extends BSimCapsuleBacterium {
         Bacterium child = new Bacterium(sim, x1_child, new Vector3d(this.x2), this.origin_id, this.id);
         this.parent_id = this.id;
         this.lifetime = 0;
+        // increment the generation (age) of cell every time it divides
+        this.generation++;
+
         // this.initialise(L1, this.x1, x2_new); // for symmetric growth
         // Asymmetrical growth occurs at division node
         // so we need to swap x1 and x2 for the mother after division for asymmetrical elongation
@@ -197,7 +204,7 @@ public class Bacterium extends BSimCapsuleBacterium {
         angle_initial = coordinate(child);
 
         // Prints a line whenever a new bacterium is made
-        System.out.println("Child ID is " + child.id);
+        // System.out.println("Child ID is " + child.id);
         return child;
     }
 
