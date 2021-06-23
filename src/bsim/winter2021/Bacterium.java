@@ -15,6 +15,13 @@ public class Bacterium extends BSimCapsuleBacterium {
     public final long origin_id;
     public long parent_id;
     public int lifetime;
+
+    // Age related to the specific end of a bacterium. Each end increments its
+    // age after division.
+    public int x1_age;
+    public int x2_age;
+
+    // Take generation (age) to be maximum of x1_age and x2_age
     public int generation;
 
     /** These fields are used to build a tree structure to keep track of lineage - Sohaib Nadeem */
@@ -29,11 +36,11 @@ public class Bacterium extends BSimCapsuleBacterium {
     /** Enables asymmetric growth. */
     static boolean asymmetric_growth = true;
     /** Length threshold for asymmetric growth (um). */
-	static double L_asym = 3.75;
-	/** Allows the cell to grow asymmetrically. */
-	static double asymmetry = 0.1;
-	/** The amount of force added back to achieve symmetric growth. */
-	static double symmetry_adjustment = 0.05;
+  	static double L_asym = 3.75;
+  	/** Allows the cell to grow asymmetrically. */
+  	static double asymmetry = 0.1;
+  	/** The amount of force added back to achieve symmetric growth. */
+  	static double symmetry_adjustment = 0.05;
 
     //function you call when you want to make a new bacterium object
     public Bacterium(BSim sim, Vector3d px1, Vector3d px2){
@@ -44,7 +51,9 @@ public class Bacterium extends BSimCapsuleBacterium {
         this.origin_id = id;
         this.parent_id = -1;
         lifetime = 0;
-        generation = 1;
+        x1_age = 0;
+        x2_age = 0;
+        generation = 0;
 
         // initialize fields for lineage tree - Sohaib Nadeem
         children = new ArrayList<>();
@@ -60,7 +69,9 @@ public class Bacterium extends BSimCapsuleBacterium {
         this.origin_id = origin_id;
         this.parent_id = parent_id;
         lifetime = 0;
-        generation = 1;
+        x1_age = 0;
+        x2_age = 0;
+        generation = 0;
 
         // initialize fields for lineage tree - Sohaib Nadeem
         children = new ArrayList<>();
@@ -182,20 +193,42 @@ public class Bacterium extends BSimCapsuleBacterium {
         longVec2.scaleAdd(-1,longVec);
         x1_child.add(longVec2); 						// Push applied to child cell
 
+
+        // Increment age of two original ends
+        this.x1_age++;
+        this.x2_age++;
+
+
         // Set the child cell.
         // Creates new bacterium called child and adds it to the lists, gives posns, infected status and chemical field status
-        Bacterium child = new Bacterium(sim, x1_child, new Vector3d(this.x2), this.origin_id, this.id);
+        // Bacterium child = new Bacterium(sim, x1_child, new Vector3d(this.x2), this.origin_id, this.id);
+        Bacterium child = new Bacterium(sim, x2_new, this.x1, this.origin_id, this.id);
+
+        // set the "old" end of the cell to the age of the cell that divided
+        // the "new" end will already have an age of 0 due to object creation
+        child.x2_age=this.x1_age;
+        child.x1_age=0;
+
         this.parent_id = this.id;
         this.lifetime = 0;
         // increment the generation (age) of cell every time it divides
-        this.generation++;
 
         // this.initialise(L1, this.x1, x2_new); // for symmetric growth
         // Asymmetrical growth occurs at division node
         // so we need to swap x1 and x2 for the mother after division for asymmetrical elongation
         // This does not affect symmetric growth
-        this.initialise(L1, x2_new, this.x1);
-        child.L = L2;
+
+        // this.initialise(L1, x2_new, this.x1);
+        this.initialise(L2, x1_child, new Vector3d(this.x2));
+
+        // set the "new" end of the dividing cell to age 0
+        this.x1_age = 0;
+
+        child.L = L1;
+
+        // calculate generation age by taking max of x1 and x2 age of daughter cells
+        this.generation = Math.max(this.x1_age,this.x2_age);
+        child.generation = Math.max(child.x1_age,child.x2_age);
 
         // add child to list of children - Sohaib Nadeem
         addChild(child);
