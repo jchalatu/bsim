@@ -29,8 +29,8 @@ public class BasicSimulation2D {
         new JCommander(bsim_parameters, args);
 
         // begins simulation
-        // run(bsim_parameters);
-        multithreading(args);
+        run(bsim_parameters);
+        // multithreading(args);
     }
 
     // a multithreaded version of main; this runs 5 simulations concurrently
