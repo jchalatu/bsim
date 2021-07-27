@@ -52,7 +52,7 @@ public class Parameters {
     // Density (cell number)
     //optional call to a default initial set of cells
     @Parameter(names = "-pop", arity = 1, description = "Initial seed population (n_total).")
-    public int initialPopulation = 10;
+    public int initialPopulation = 1;
 
     // A:R ratio
     // for default set of cells, set ratio of two subpopulations
@@ -108,8 +108,8 @@ public class Parameters {
     public static double L_asym = 3.75;
     // value of asymmetry
     @Parameter(names="-asym",arity=1,description = "asymmetry")
-    public static double asymmetry = 0.1;
+    public static double asymmetry = 0.5;
     // symmetric growth
-    @Parameter(names="-sym",arity=1,description = "symmetric growth")
-    public static double sym_growth = 0.05;
+    @Parameter(names="-asym_scale",arity=1,description = "asymmetry scale")
+    public static double asymmetry_scale = 0.75;
 }
