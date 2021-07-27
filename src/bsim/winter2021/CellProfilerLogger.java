@@ -21,6 +21,7 @@ public class CellProfilerLogger extends BSimLogger {
     @Override
     public void before() {
         super.before();
+        String Age_fields = "CellAge_Generation,Node_x1_x,Node_x1_y,Node_x2_x,Node_x2_y";
         String AreaShape_fields = "ImageNumber,ObjectNumber,AreaShape_Area,AreaShape_BoundingBoxArea," +
                 "AreaShape_BoundingBoxMaximum_X,AreaShape_BoundingBoxMaximum_Y,AreaShape_BoundingBoxMinimum_X," +
                 "AreaShape_BoundingBoxMinimum_Y,AreaShape_Center_X,AreaShape_Center_Y,AreaShape_Compactness," +
@@ -35,7 +36,7 @@ public class CellProfilerLogger extends BSimLogger {
         String other_fields = "Location_Center_X,Location_Center_Y,Location_Center_Z,Number_Object_Number,Parent_filtered_objects_1_labeled";
         String other_fields2 = "Location_Center_X,Location_Center_Y,Number_Object_Number,Parent_EditedObjects8,Parent_IdentifyPrimaryObjects7,Division_Angle";
         //write(CellProfilerFields + "," + other2 + "\n");
-        write(AreaShape_fields + "," + other_fields + "," + TrackObjects_fields + "\n");
+        write(AreaShape_fields + "," + other_fields + "," + TrackObjects_fields + "," + Age_fields + "\n");
     }
 
     @Override
@@ -67,7 +68,8 @@ public class CellProfilerLogger extends BSimLogger {
             String TrackObjects_fields = str.repeat(4) + (b.origin_id + 1) + "," + str.repeat(2) +
                     (image_number - 1) + "," + (b.lifetime == 0 ? b.parent_id + 1 : b.id + 1) + ",-,-";
 
-            buffer += AreaShape_fields + "," + other_fields2 + "," + TrackObjects_fields + "\n";
+            String Age_fields = String.valueOf(b.generation) + "," + (b.x1.x * pixel_to_um_ratio) + "," + (b.x1.y * pixel_to_um_ratio) + "," + (b.x2.x * pixel_to_um_ratio) + "," + (b.x2.y * pixel_to_um_ratio);
+            buffer += AreaShape_fields + "," + other_fields2 + "," + TrackObjects_fields + "," + Age_fields + "\n";
         }
         write(buffer);
     }
@@ -81,4 +83,3 @@ public class CellProfilerLogger extends BSimLogger {
         }
     }
 }
-

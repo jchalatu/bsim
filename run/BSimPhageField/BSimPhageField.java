@@ -22,27 +22,27 @@ import java.util.List;
 import java.io.File;
 
 /**
- * 
+ *
  * This class represents an environment with phage.
  * A number of BSimBacterium bacteria are set up to swim around in a phage field.
  * If the density of phage around a bacteria is above a certain threshold, the bacteria
  * will become infected.
  * Infected bacteria will produce and release phages into the surrounding medium.
- * 
+ *
  */
 public class BSimPhageField {
-	
+
     static final double pixel_to_um_ratio = 13.89;
     final int width_pixels = 800;
     final int height_pixels = 600;
     final double width_um = width_pixels / pixel_to_um_ratio; 	// should be kept as constants for cell prof.
     final double height_um = height_pixels / pixel_to_um_ratio; // need to confirm if these values are always used
-    
+
     // Boundaries
     // Boolean flag: specifies whether any walls are needed
     @Parameter(names = "-fixedbounds", description = "Enable fixed boundaries. (If not, one boundary will be leaky as real uf chamber).")
     private boolean fixedBounds = false;
-    
+
     // @parameter means an optional user-specified value in the command line
     // export mode means output appears
     @Parameter(names = "-export", description = "Enable export mode.")
@@ -50,7 +50,7 @@ public class BSimPhageField {
 
     @Parameter(names = "-export_path", description = "export location")
     private String export_path = "default";
-    
+
     @Parameter(names = "-grow", description = "Enable bacteria growth.")
     private boolean WITH_GROWTH = true;
     @Parameter(names = "-flow_in", description = "Enable phage from boundary.")
@@ -61,7 +61,7 @@ public class BSimPhageField {
     private double initial_quantity = 1e5;
     @Parameter(names = "-phage_pos", description = "Initial position of phage distribution.")
     private Vector3d initial_pos = new Vector3d(width_um/2, height_um/2, 1);
-    
+
     // Simulation setup parameters. Set dimensions in um
     @Parameter(names = "-dim", arity = 3, description = "The dimensions (x, y, z) of simulation environment (um).")
     //public List<Double> simDimensions = new ArrayList<>(Arrays.asList(new Double[] {75.0, 50.0, 1.0} ));
@@ -82,10 +82,10 @@ public class BSimPhageField {
     // for default set of cells, set ratio of two subpopulations
     @Parameter(names = "-ratio", arity = 1, description = "Ratio of initial populations (proportion of activators).")
     public double populationRatio = 0.0;
-    
+
     //growth rate standard deviation
     @Parameter(names="-el_stdv",arity=1,description = "elongation rate standard deviation")
-    public static double el_stdv = 0.277;	
+    public static double el_stdv = 0.277;
     @Parameter(names="-el_mean",arity=1,description = "elongation rate mean")
     public static double el_mean = 1.23;
 
@@ -95,7 +95,7 @@ public class BSimPhageField {
     //elongation threshold mean
     @Parameter(names="-div_mean",arity=1,description = "elongation threshold mean")
     public static double div_mean = 7.0;
-    
+
     // Simulation Time
     @Parameter(names="-simt",arity=1,description = "simulation time")
     public static double sim_time = 6.5;
@@ -103,7 +103,7 @@ public class BSimPhageField {
     public static double sim_dt = 0.05;
     @Parameter(names="-export_time",arity=1,description = "export time")
     public static double export_time = 0.5;// Previously was 10, and simulation time was 100
-    
+
     // internal force
     @Parameter(names="-k_int",arity=1,description = "internal force")
     public static double k_int = 50.0;
@@ -113,18 +113,18 @@ public class BSimPhageField {
     // sticking force
     @Parameter(names="-k_stick",arity=1,description = "side-to-side attraction")
     public static double k_sticking = 0.01;
-    
+
     // sticking range
     @Parameter(names="-rng_stick",arity=1,description = "max range side-to-side attraction")
     public static double range_sticking = 5.0;
-    
+
     // twist
     @Parameter(names="-twist",arity=1,description = "twist")
     public static double twist = 0.1;
     // push
     @Parameter(names="-push",arity=1,description = "push")
     public static double push = 0.05;
-    
+
     // asymmetric growth threshold
     @Parameter(names="-l_asym",arity=1,description = "asymmetric growth threshold")
     public static double L_asym = 3.75;
@@ -135,9 +135,9 @@ public class BSimPhageField {
     @Parameter(names="-sym",arity=1,description = "symmetric growth")
     public static double sym_growth = 0.05;
 
-    /** Main Function. 
+    /** Main Function.
      * This is the very first function that runs in the simulation.
-     * This runs the simulation. */ 
+     * This runs the simulation. */
     public static void main(String[] args) {
 
         // Creates new simulation data object
@@ -151,33 +151,33 @@ public class BSimPhageField {
         // Begins the simulation
         bsim_ex.run();
     }
-    
+
     /** Creates a new Bacterium object. */
     public static PhageFieldBacterium createBacterium(BSim sim, BSimChemicalField field ) {
     	Random bacRng = new Random(); 		// Random number generator
         bacRng.setSeed(50); 				// Initializes random number generator
-        
-        // Random initial positions 
-        Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x, 
-				Math.random()*sim.getBound().y, 
+
+        // Random initial positions
+        Vector3d pos1 = new Vector3d(Math.random()*sim.getBound().x,
+				Math.random()*sim.getBound().y,
 				Math.random()*sim.getBound().z);
-	
+
         double r = div_mean * Math.sqrt(Math.random());
         double theta = Math.random() * 2 * Math.PI;
-        Vector3d pos2 = new Vector3d(pos1.x + r * Math.cos(theta), 
-				pos1.y + r * Math.sin(theta), 
+        Vector3d pos2 = new Vector3d(pos1.x + r * Math.cos(theta),
+				pos1.y + r * Math.sin(theta),
 				pos1.z);
-        
+
         // Check if the random coordinates are within bounds
         while(pos2.x >= sim.getBound().x || pos2.x <= 0 || pos2.y >= sim.getBound().y || pos2.y <= 0) {
-        	pos1 = new Vector3d(Math.random()*sim.getBound().x, 
-    				Math.random()*sim.getBound().y, 
+        	pos1 = new Vector3d(Math.random()*sim.getBound().x,
+    				Math.random()*sim.getBound().y,
     				Math.random()*sim.getBound().z);
-        	pos2 = new Vector3d(pos1.x + r * Math.cos(theta), 
-    				pos1.y + r * Math.sin(theta), 
+        	pos2 = new Vector3d(pos1.x + r * Math.cos(theta),
+    				pos1.y + r * Math.sin(theta),
     				pos1.z);
         }
-        
+
         // Creates a new bacterium object whose endpoints correspond to the above data
         PhageFieldBacterium bacterium = new PhageFieldBacterium(sim, field, pos1, pos2);
 
@@ -188,18 +188,18 @@ public class BSimPhageField {
         Vector3d dispx1x2 = new Vector3d();
         dispx1x2.sub(pos2, pos1); 						// Sub is subtract
         double length = dispx1x2.length(); 				// Determined.
-        
+
         if (length < bacterium.L_max) {
             bacterium.initialise(length, pos1, pos2); 	// Redundant to record length, but ok.
         }
-        
+
         // Assigns a growth rate and a division length to bacterium according to a normal distribution
         double growthRate = el_stdv * bacRng.nextGaussian() + el_mean;
         bacterium.setK_growth(growthRate);
-        
+
         double lengthThreshold = div_stdv * bacRng.nextGaussian() + div_mean;
         bacterium.setElongationThreshold(lengthThreshold);
-        
+
         // Assigns the specified forces, range, and impulses
         bacterium.setIntForce(k_int);
         bacterium.setCellForce(k_cell);
@@ -207,10 +207,8 @@ public class BSimPhageField {
         bacterium.setStickingRange(range_sticking);
         bacterium.setTwist(twist);
         bacterium.setPush(push);
-        
-        bacterium.setLAsym(L_asym);
+
         bacterium.setAsym(asymmetry);
-        bacterium.setSym(sym_growth);
 
         return bacterium;
     }
@@ -223,7 +221,7 @@ public class BSimPhageField {
     // |----> Logs all data from the simulation into an excel sheet
     // |----> Saves images of simulation
     public void run() {
-    	
+
 		/*********************************************************
 		 * Define simulation domain size and start time
 		 */
@@ -238,19 +236,19 @@ public class BSimPhageField {
 		 * Create a new simulation object and set up simulation settings
 		 */
         final BSim sim = new BSim();
-        sim.setDt(sim_dt);					// Set simulation timestep in time units 
+        sim.setDt(sim_dt);					// Set simulation timestep in time units
         									// Let the time units be in hours
         sim.setSimulationTime(sim_time);    // Specified in time units, could also specify a termination condition elsewhere
         sim.setTimeFormat("0.00");		    // Time Format for display on images
         sim.setBound(simX, simY, simZ);		// Simulation domain Boundaries
 
-		// NOTE - solid = false sets a periodic boundary condition. 
+		// NOTE - solid = false sets a periodic boundary condition.
 		// This overrides leakiness!
 		sim.setSolid(true, true, true);		// Solid (true) or wrapping (false) boundaries
 
-        // Leaky -> bacteria can escape from sides of six faces of the box. 
+        // Leaky -> bacteria can escape from sides of six faces of the box.
 		// Only usable if fixedbounds allows it
-		
+
 		// Set a closed or open boundary for phage diffusion
 		if ( fixedBounds ) {
 			sim.setLeaky(false, false, false, false, false, false);
@@ -260,7 +258,7 @@ public class BSimPhageField {
 			sim.setLeaky(true, true, true, true, false, false);
 			sim.setLeakyRate(1, 1, 1, 1, 0, 0);
 		}
-		
+
 		/*********************************************************
 		 * Set up the phage field
 		 */
@@ -268,19 +266,19 @@ public class BSimPhageField {
 		final double decayRate = 0.00308;	// Decay rate of phages (M13: 0.074/day), 0.5
 											// 0.074/24hrs = 0.00308/hr
 		final double diffusivity = 3;	 	// (Microns)^2/sec
-		
+
 		final int field_box_num = 50;		// Number of boxes to represent the chemical field
 		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{field_box_num, field_box_num, 1}, diffusivity, decayRate);
-		
+
         /*********************************************************
          * Create the bacteria
          */
-		
+
         // Separate lists of bacteria in case we want to manipulate the species individually
         // If multiple subpopulations, they'd be initialized separately, they'd be kept in different
         // need an array for each subpopulation, members can be repeated.
         final ArrayList<PhageFieldBacterium> bac = new ArrayList();
-        
+
         /** Track all of the bacteria in the simulation, for use of common methods etc.
         A general class, no sub-population specifics. */
         final ArrayList<BSimCapsuleBacterium> bacteriaAll = new ArrayList();
@@ -293,14 +291,14 @@ public class BSimPhageField {
         String systemPath = new File("").getAbsolutePath()+"\\PhageFieldSims";
 
 		// Create new phage sensing bacteria objects randomly in space
-		while( bacteriaAll.size() < initialPopulation ) {	
-            
+		while( bacteriaAll.size() < initialPopulation ) {
+
             // Creates a new bacterium object whose endpoints correspond to the above data
 			PhageFieldBacterium bacterium = createBacterium( sim, field );
-			
+
 			// Adds the newly created bacterium to our lists for tracking purposes
 			bac.add(bacterium); 			// For separate subpopulations
-			bacteriaAll.add(bacterium);		// For all cells	
+			bacteriaAll.add(bacterium);		// For all cells
 		}
 
         // Set up stuff for growth. Placeholders for the recently born and dead
@@ -311,9 +309,9 @@ public class BSimPhageField {
         // Some kind of initialize of mover
         final Mover mover;
         mover = new RelaxationMoverGrid(bacteriaAll, sim);
-        
+
         /*********************************************************
-         * Add initial distribution of phage 
+         * Add initial distribution of phage
          */
         if (ADD_PHAGE) {
         	field.addQuantity(initial_pos, initial_quantity);
@@ -328,14 +326,14 @@ public class BSimPhageField {
         ticker.setGrowth(WITH_GROWTH);			// enables bacteria growth
         ticker.setFlow(FLOW_IN);				// enables flow in of phage from boundary
         sim.setTicker(ticker);
-        
+
         /*********************************************************
          * Set up the drawer
          */
         PhageFieldDrawer drawer = new PhageFieldDrawer(sim, width_pixels, height_pixels, pixel_to_um_ratio, bac,
         		field, c);
         sim.setDrawer(drawer);
-        
+
         /*********************************************************
          * Export data
          */
@@ -464,7 +462,7 @@ public class BSimPhageField {
             imageExporter.setDt(export_time); //this is how often it will output a frame
             // separate time-resolution for images vs excel file
             sim.addExporter(imageExporter);
-            
+
             /**
              * Export a csv file to save information about infection
              */
@@ -487,20 +485,18 @@ public class BSimPhageField {
              * See TwoCellsSplitGRNTest
              */
 
-        } 
-        
+        }
+
         // Run the simulation
         else {
             sim.preview();
         }
-        
+
         long simulationEndTime = System.nanoTime();
 
         System.out.println("Total simulation time: " + (simulationEndTime - simulationStartTime)/1e9 + " sec.");
-        
+
     }
-    
-    
+
+
 }
-
-

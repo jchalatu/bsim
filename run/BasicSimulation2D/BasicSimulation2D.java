@@ -29,10 +29,11 @@ public class BasicSimulation2D {
         new JCommander(bsim_parameters, args);
 
         // begins simulation
-        run(bsim_parameters);
+        // run(bsim_parameters);
+        multithreading(args);
     }
 
-    // a multithreaded version of main; this runs 4 simulation concurrently
+    // a multithreaded version of main; this runs 5 simulations concurrently
     // TODO: output to console and saved files are not being handled correctly
     //  (saved files by the loggers are only kept for a single thread)
     public static void multithreading(String[] args) {
@@ -65,12 +66,15 @@ public class BasicSimulation2D {
         Parameters p4 = new Parameters();
         new JCommander(p4, args);
         threads.add( new Thread(() -> run(p4)) );
+        Parameters p5 = new Parameters();
+        new JCommander(p5, args);
+        threads.add( new Thread(() -> run(p5)) );
 
-        for(int i = 0; i < 4; i++) {
+        for(int i = 0; i < 5; i++) {
             threads.get(i).start();
         }
 
-        for(int i = 0; i < 4; i++) {
+        for(int i = 0; i < 5; i++) {
             try {
                 threads.get(i).join();
             } catch (InterruptedException e) {
@@ -112,6 +116,7 @@ public class BasicSimulation2D {
     public static void run(Parameters parameters) {
         boolean export = parameters.export;
         String export_path = parameters.export_path;
+        String input_data = parameters.input_data;
         List<Double> simDimensions = parameters.simDimensions;
         boolean fixedBounds = parameters.fixedBounds;
         int initialPopulation = parameters.initialPopulation;
@@ -122,7 +127,6 @@ public class BasicSimulation2D {
         double div_mean = parameters.div_mean;
         double sim_time = parameters.sim_time;;
         double sim_dt = parameters.sim_dt;
-
         double export_time = parameters.export_time;
         double k_int = parameters.k_int;
         double k_cell = parameters.k_cell;
@@ -130,21 +134,23 @@ public class BasicSimulation2D {
         double range_sticking = parameters.range_sticking;
         double twist = parameters.twist;
         double push = parameters.push;
-        double L_asym = parameters.L_asym;
         double asymmetry = parameters.asymmetry;
-        double sym_growth = parameters.sym_growth;
+        double asymmetry_scale = parameters.asymmetry_scale;
+        double contact_range = parameters.contact_range;
+        double contact_threshold = parameters.contact_threshold;
 
         // Assigns the specified forces, range, and impulses
         BSimCapsuleBacterium.setIntForce(k_int);
         BSimCapsuleBacterium.setCellForce(k_cell);
         BSimCapsuleBacterium.setStickForce(k_sticking);
         BSimCapsuleBacterium.setStickingRange(range_sticking);
+        BSimCapsuleBacterium.setContactRange(contact_range);
+        BSimCapsuleBacterium.setContactThreshold(contact_threshold);
 
         Bacterium.setTwist(twist);
         Bacterium.setPush(push);
-        Bacterium.setLAsym(L_asym);
         Bacterium.setAsym(asymmetry);
-        Bacterium.setSym(sym_growth);
+        Bacterium.setAsymScale(asymmetry_scale);
 
         final double pixel_to_um_ratio = parameters.pixel_to_um_ratio;
 
@@ -158,7 +164,7 @@ public class BasicSimulation2D {
 
         // create the simulation object
         final BSim sim = new BSim();
-        sim.setDt(sim_dt);                    // set Simulation Timestep in time units
+        sim.setDt(sim_dt);
         sim.setSimulationTime(sim_time);      // specified in time units, could also specify a termination condition elsewhere
         sim.setTimeFormat("0.00");            // Time Format for display on images
         sim.setBound(simX, simY, simZ);       // Simulation domain Boundaries
@@ -191,12 +197,13 @@ public class BasicSimulation2D {
 
         // gets the location of the file that is currently running
         //specify output file path
-        String systemPath = new File("").getAbsolutePath() + "\\SingleCellSims";
 
-        String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\run\\initialization_data\\twocellssidebyside2-400by400.csv";
+        String systemPath = new File("").getAbsolutePath();
+
+        // TODO: HANDLE DEFAULT INPUT DATA FILE
+        String initial_data_path = input_data;
         RawReader reader = new RawReader(pixel_to_um_ratio);
-        //String initial_data_path = "C:\\Users\\sohai\\IdeaProjects\\bsim\\run\\initialization_data\\MyExpt_filtered_objects_2-1870by2208.csv";
-        //CellProfilerReader reader = new CellProfilerReader(pixel_to_um_ratio, 1);
+
         ArrayList<double[]> cell_endpoints = reader.readcsv(initial_data_path);
         for(int i = 0; i < cell_endpoints.size(); i++) {//double[] cell : cell_endpoints) {
             double[] cell = cell_endpoints.get(i);
@@ -223,57 +230,49 @@ public class BasicSimulation2D {
         ticker.setGrowth(true); // whether to enable growth in the ticker or not; if false nothing can grow
         sim.setTicker(ticker);
 
-        // the rest of the code is the drawer (makes simulation images) and data logger (makes csv files)
         /*********************************************************
-         * Set up the drawer
+         * Set up output files
          */
-        BasicDrawer drawer = new BasicDrawer(sim, 800, 600, pixel_to_um_ratio, bac);
-        sim.setDrawer(drawer);
+        String simParameters = "" + BSimUtils.timeStamp() + "__dim_" + simX + "_" + simY + "_" + simZ
+                + "__ip_" + initialPopulation
+                + "__pr_" + populationRatio;
+
+        if (fixedBounds) {
+            simParameters += "__fixedBounds";
+        } else {
+            simParameters += "__leakyBounds";
+        }
+
+        String filePath;
+        if(export_path == "default") {
+            filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
+        } else {
+            filePath = BSimUtils.generateDirectoryPath(export_path + "/" + java.util.UUID.randomUUID() + "/");
+        }
+
+
+        /** Export a csv file that matches CellProfiler's output */
+
+        CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "BSim_Simulation.csv", bac, pixel_to_um_ratio);
+        // Set export time step, should be the same as sim.dt for the TrackObjects_fields to be correct
+        // This is because division events are identified by a lifetime of 0, and lifetime increments are based on on sim.dt
+        // (Lifetime could be converted to be in terms of cp_logger.dt if we use a multiple of sim.dt)
+        cp_logger.setDt(export_time);
+        sim.addExporter(cp_logger);
+
 
         /*********************************************************
          * Set up the exporters if in export mode and run the simulation
          */
         if (export) {
-            String simParameters = "" + BSimUtils.timeStamp() + "__dim_" + simX + "_" + simY + "_" + simZ
-                    + "__ip_" + initialPopulation
-                    + "__pr_" + populationRatio;
 
-            if (fixedBounds) {
-                simParameters += "__fixedBounds";
-            } else {
-                simParameters += "__leakyBounds";
-            }
-
-            String filePath;
-            if(export_path == "default") {
-                filePath = BSimUtils.generateDirectoryPath(systemPath +"/" + simParameters + "/");
-                //String filePath = BSimUtils.generateDirectoryPath("/home/am6465/tmp-results/" + simParameters + "/");
-            } else {
-                filePath = BSimUtils.generateDirectoryPath(export_path + "/");
-            }
-
-
-            /** Export a csv file that matches CellProfiler's output */
-            CellProfilerLogger cp_logger = new CellProfilerLogger(sim, filePath + "MyExpt_EditedObjects8_simulation.csv", bac, pixel_to_um_ratio);
-            // Set export time step, should be the same as sim.dt for the TrackObjects_fields to be correct
-            // This is because division events are identified by a lifetime of 0, and lifetime increments are based on on sim.dt
-            // (Lifetime could be converted to be in terms of cp_logger.dt if we use a multiple of sim.dt)
-            cp_logger.setDt(sim.getDt());
-            sim.addExporter(cp_logger);
-
-            /*
-            MetaLogger metaLogger = new MetaLogger(sim, filePath + "simInfo.txt", parameters, bac.size());
-            metaLogger.setDt(export_time);			// Set export time step
-            sim.addExporter(metaLogger);
-
-            PositionLogger posLogger = new PositionLogger(sim, filePath + "position.csv", bacteriaAll);
-            posLogger.setDt(export_time);			// set export time step for csv file
-            sim.addExporter(posLogger);
-
-            SummaryLogger sumLogger = new SummaryLogger(sim, filePath + "summary.csv", bacteriaAll);
-            sumLogger.setDt(export_time);			// Set export time step
-            sim.addExporter(sumLogger);
+            // the rest of the code is the drawer (makes simulation images) and data logger (makes csv files)
+            /*********************************************************
+             * Set up the drawer
              */
+            BasicDrawer drawer = new BasicDrawer(sim, 800, 600, pixel_to_um_ratio, bac);
+            sim.setDrawer(drawer);
+
 
             /** Export a rendered image file */
             BSimPngExporter imageExporter = new BSimPngExporter(sim, drawer, filePath);
@@ -287,15 +286,16 @@ public class BasicSimulation2D {
             videoExporter.setDt(0.01); // this is how often (in simulation time) it will output a frame for the video
             sim.addExporter(videoExporter);
 
-            sim.export();
 
             /**
              * Drawing a java plot once we're done?
              * See TwoCellsSplitGRNTest
              */
-        } else {
-            sim.preview();
-        }
+         }
+         sim.export();
+        // } else {
+        //     sim.preview();
+        // }
 
         long simulationEndTime = System.nanoTime();
         System.out.println("Total simulation time: " + (simulationEndTime - simulationStartTime) / 1e9 + " sec.");

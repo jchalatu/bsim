@@ -63,7 +63,7 @@ public class BSimCapsuleBacterium {
 
     // growth rate of bacterium -> increases length each second
     public double k_growth = 0.02;
-	
+
     /** Angle between daughter cells at division. */
     public double angle_initial = 0.0;
 
@@ -82,8 +82,8 @@ public class BSimCapsuleBacterium {
     public static double range_wallstick = 0.25; 	// max range ... attractive wall forces
 
     // contact range extension (pilus length) and contact threshold for sticking force (side to side attraction)
-    public double contact_range_extension = 0.25;
-    public double contact_threshold = 4.0;
+    public static double contact_range_extension = 0.25;
+    public static double contact_threshold = 4.0;
 
     // stores data about the simulation so that each cell can use that information
     protected BSim sim;
@@ -148,6 +148,10 @@ public class BSimCapsuleBacterium {
     public static void setStickForce(double k_sticking) { BSimCapsuleBacterium.k_sticking = k_sticking; }
     /** Sets the range of the sticking force. **/
     public static void setStickingRange(double range_sticking) {BSimCapsuleBacterium.range_sticking = range_sticking; }
+    /** Sets the contact range extension (pilus length). **/
+    public static void setContactRange(double contact_range_extension) {BSimCapsuleBacterium.contact_range_extension = contact_range_extension; }
+    /** Sets the threshold of the sticking force. **/
+    public static void setContactThreshold(double contact_threshold) {BSimCapsuleBacterium.contact_threshold = contact_threshold; }
 
     public double stokesCoefficient() { return 6.0*Math.PI*radius*sim.getVisc(); } // micrometers*Pa sec
 
@@ -348,7 +352,7 @@ public class BSimCapsuleBacterium {
          *            .            .  *stopped* by the RHS bound check!
          *
          */
-    	
+
     	if ( sim.wall_boundaries[0] ) {
     		wallBelow(x1.x, x1force, new Vector3d(1,0,0));
     		wallBelow(x2.x, x2force, new Vector3d(1,0,0));
@@ -361,7 +365,7 @@ public class BSimCapsuleBacterium {
     		wallBelow(x1.z, x1force, new Vector3d(0,0,1));
     		wallBelow(x2.z, x2force, new Vector3d(0,0,1));
     	}
-        
+
         if ( sim.wall_boundaries[3] ) {
         	wallAbove(x1.x, x1force, new Vector3d(-1,0,0), sim.getBound().x);
         	wallAbove(x2.x, x2force, new Vector3d(-1,0,0), sim.getBound().x);
@@ -374,7 +378,7 @@ public class BSimCapsuleBacterium {
         	wallAbove(x1.z, x1force, new Vector3d(0, 0, -1), sim.getBound().z);
         	wallAbove(x2.z, x2force, new Vector3d(0, 0, -1), sim.getBound().z);
         }
-        
+
         ///////////////////////////Catie Terrey
         // added forces from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4017289/
 
@@ -624,44 +628,46 @@ public class BSimCapsuleBacterium {
 
                 // damping of the sticking force is used to prevent its strong attraction from causing cells
                 // to slide up to one another
-                double contact_area = getOrientedBoundingBoxIntersectionPerimeter(neighbour_bac, contact_range_extension);
-                // a value of 1.0 will result in no damping
-                double damping = Math.min(1.0, 1 - contact_area / contact_threshold);
+                double contact_area_threshold = getOrientedBoundingBoxIntersectionPerimeter(neighbour_bac, contact_range_extension);
+                // a value of 1.0 will result in no damping (damping_factor is bound between [0,1]).
+                double check_contact = Math.abs(1.0 - contact_area_threshold / contact_threshold);
+                double damping_factor = Math.min(1.0,check_contact);
+
 
                 double dot_product = u.dot(v);
 
                 if (dot_product > 0 /*d11<d12 && d11 < d21*/) {
                     // if cells are oriented same direction
-                    double strength11 = -k_sticking * (d11 - stickingRestShort) * damping;
+                    double strength11 = -k_sticking * (d11 - stickingRestShort) * damping_factor;
                     this.x1force.scaleAdd(strength11, axis11, this.x1force);
                     neighbour_bac.x1force.scaleAdd(-strength11, axis11, neighbour_bac.x1force);
 
-                    double strength22 = -k_sticking * (d22 - stickingRestShort) * damping;
+                    double strength22 = -k_sticking * (d22 - stickingRestShort) * damping_factor;
                     this.x2force.scaleAdd(strength22, axis22, this.x2force);
                     neighbour_bac.x2force.scaleAdd(-strength22, axis22, neighbour_bac.x2force);
 
-                    double strength12 = -k_sticking * (d12 - stickingRestLong) * damping;
+                    double strength12 = -k_sticking * (d12 - stickingRestLong) * damping_factor;
                     this.x1force.scaleAdd(strength12, axis12, this.x1force);
                     neighbour_bac.x2force.scaleAdd(-strength12, axis12, neighbour_bac.x2force);
 
-                    double strength21 = -k_sticking * (d21 - stickingRestLong) * damping;
+                    double strength21 = -k_sticking * (d21 - stickingRestLong) * damping_factor;
                     this.x2force.scaleAdd(strength21, axis21, this.x2force);
                     neighbour_bac.x1force.scaleAdd(-strength21, axis21, neighbour_bac.x1force);
                 } else {
                     // if cells are oriented opposite direction
-                    double strength11 = -k_sticking * (d11 - stickingRestLong) * damping;
+                    double strength11 = -k_sticking * (d11 - stickingRestLong) * damping_factor;
                     this.x1force.scaleAdd(strength11, axis11, this.x1force);
                     neighbour_bac.x1force.scaleAdd(-strength11, axis11, neighbour_bac.x1force);
 
-                    double strength22 = -k_sticking * (d22 - stickingRestLong) * damping;
+                    double strength22 = -k_sticking * (d22 - stickingRestLong) * damping_factor;
                     this.x2force.scaleAdd(strength22, axis22, this.x2force);
                     neighbour_bac.x2force.scaleAdd(-strength22, axis22, neighbour_bac.x2force);
 
-                    double strength12 = -k_sticking * (d12 - stickingRestShort) * damping;
+                    double strength12 = -k_sticking * (d12 - stickingRestShort) * damping_factor;
                     this.x1force.scaleAdd(strength12, axis12, this.x1force);
                     neighbour_bac.x2force.scaleAdd(-strength12, axis12, neighbour_bac.x2force);
 
-                    double strength21 = -k_sticking * (d21 - stickingRestShort) * damping;
+                    double strength21 = -k_sticking * (d21 - stickingRestShort) * damping_factor;
                     this.x2force.scaleAdd(strength21, axis21, this.x2force);
                     neighbour_bac.x1force.scaleAdd(-strength21, axis21, neighbour_bac.x1force);
                 }
