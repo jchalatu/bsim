@@ -38,9 +38,9 @@ public class Bacterium extends BSimCapsuleBacterium {
     /** Length threshold for asymmetric growth (um). */
   	static double L_asym = 3.75;
   	/** Allows the cell to grow asymmetrically. */
-  	static double asymmetry = 0.1;
+  	static double asymmetry_init = 0.1;
   	/** The amount of force added back to achieve symmetric growth. */
-  	static double symmetry_adjustment = 0.05;
+  	static double asymmetry_scaling = 0.05;
 
     //function you call when you want to make a new bacterium object
     public Bacterium(BSim sim, Vector3d px1, Vector3d px2){
@@ -81,9 +81,9 @@ public class Bacterium extends BSimCapsuleBacterium {
     /** Sets the value for asymmetric growth threshold. **/
     public static void setLAsym(double length) { L_asym = length; }
     /** Sets the value of asymmetry. **/
-    public static void setAsym(double a) { asymmetry = a; }
+    public static void setAsym(double a) { asymmetry_init = a; }
     /** Sets the value of symmetric growth. **/
-    public static void setSym(double s) { symmetry_adjustment = s; }
+    public static void setAsymScale(double s) { asymmetry_scaling  = s; }
 
     /** Sets the value of the twist during division. **/
     public static void setTwist(double t) { Bacterium.twist = t; }
@@ -117,17 +117,24 @@ public class Bacterium extends BSimCapsuleBacterium {
             }
 
             // Cell gradually starts growing symmetrically after the length threshold is met
-            // and  as asym approaches 1.0
-            if (asymmetry <= 1.0) {
-                asymmetry += symmetry_adjustment * sim.getDt();
-            }
+            // and as asym approaches 1.0
+
+	          double denominator = asymmetry_scaling*this.L_th + 1e-16;
+            double asymmetry_factor = asymmetry_init * (1 - (this.L/denominator));
+
+            double asymmetry = Math.max(0,asymmetry_factor);
+
 
 
             // Elongate asymmetrically until the length threshold is met
+
             // Internal potential is doubled to account for the x1force
-            this.x1force.scaleAdd(-internalPotential * (2 - asymmetry), seg, this.x1force);
-            this.x2force.scaleAdd(internalPotential * asymmetry, seg, this.x2force);
-        } else {
+
+            this.x1force.scaleAdd(-internalPotential * (1+asymmetry), seg, this.x1force);
+
+            this.x2force.scaleAdd(internalPotential * (1-asymmetry), seg, this.x2force);
+
+	} else {
             super.computeSelfForce();
         }
     }
