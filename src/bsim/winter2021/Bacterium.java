@@ -168,7 +168,7 @@ public class Bacterium extends BSimCapsuleBacterium {
     public Bacterium divide() {
         Vector3d randomVec = new Vector3d(rng.nextDouble(), rng.nextDouble(), rng.nextDouble());
         randomVec.scale(twist);
-        // System.out.println("Bacterium " + this.id + " is dividing...");
+        System.out.println("Bacterium " + this.id + " is dividing...");
 
         Vector3d u = new Vector3d();
         u.sub(this.x2, this.x1);
@@ -244,7 +244,7 @@ public class Bacterium extends BSimCapsuleBacterium {
         angle_initial = coordinate(child);
 
         // Prints a line whenever a new bacterium is made
-        // System.out.println("Child ID is " + child.id);
+        System.out.println("Child ID is " + child.id);
         return child;
     }
 
