@@ -134,9 +134,8 @@ public class BasicSimulation2D {
         double range_sticking = parameters.range_sticking;
         double twist = parameters.twist;
         double push = parameters.push;
-        double L_asym = parameters.L_asym;
         double asymmetry = parameters.asymmetry;
-        double sym_growth = parameters.sym_growth;
+        double asymmetry_scale = parameters.asymmetry_scale;
         double contact_range = parameters.contact_range;
         double contact_threshold = parameters.contact_threshold;
 
@@ -150,9 +149,8 @@ public class BasicSimulation2D {
 
         Bacterium.setTwist(twist);
         Bacterium.setPush(push);
-        Bacterium.setLAsym(L_asym);
         Bacterium.setAsym(asymmetry);
-        Bacterium.setSym(sym_growth);
+        Bacterium.setAsymScale(asymmetry_scale);
 
         final double pixel_to_um_ratio = parameters.pixel_to_um_ratio;
 
