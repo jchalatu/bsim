@@ -617,8 +617,8 @@ public class BSimCapsuleBacterium {
             dP.scaleAdd(sc, u, dP);
             dP.scaleAdd(-tc, v, dP);
             double neighbourDist = dP.length();
-
-            if (neighbourDist < 2 * (radius + contact_range_extension)) {
+            double neighbourDistTol = 2*(radius + contact_range_extension);
+            if (neighbourDist < 2*neighbourDistTol) {
                 /** sticking force */
                 double maxCellLength = Math.max(this.L, neighbour_bac.L); // checks which cell is longer
                 // computes rest length of diagonally oriented springs -> sqrt((2r)^2 + L^2)
@@ -638,38 +638,73 @@ public class BSimCapsuleBacterium {
 
                 if (dot_product > 0 /*d11<d12 && d11 < d21*/) {
                     // if cells are oriented same direction
-                    double strength11 = -k_sticking * (d11 - stickingRestShort) * damping_factor;
+                    double d11_diff = (d11 - stickingRestShort);
+                    double d22_diff = (d22 - stickingRestShort);
+                    double d12_diff = (d12 - stickingRestLong);
+                    double d21_diff = (d21 - stickingRestLong);
+
+                    double strength11 = 0;
+                    if (Math.abs(d11_diff) < neighbourDistTol){
+                      strength11 = -k_sticking * d11_diff * Math.pow(neighbourDistTol-Math.abs(d11_diff),2) * damping_factor;
+                    }
                     this.x1force.scaleAdd(strength11, axis11, this.x1force);
                     neighbour_bac.x1force.scaleAdd(-strength11, axis11, neighbour_bac.x1force);
 
-                    double strength22 = -k_sticking * (d22 - stickingRestShort) * damping_factor;
+                    double strength22 = 0;
+                    if (Math.abs(d22_diff) < neighbourDistTol){
+                      strength22 = -k_sticking * d22_diff * Math.pow(neighbourDistTol-Math.abs(d22_diff),2) * damping_factor;
+                    }
                     this.x2force.scaleAdd(strength22, axis22, this.x2force);
                     neighbour_bac.x2force.scaleAdd(-strength22, axis22, neighbour_bac.x2force);
 
-                    double strength12 = -k_sticking * (d12 - stickingRestLong) * damping_factor;
+                    double strength12 = 0;
+                    if (Math.abs(d12_diff) < neighbourDistTol){
+                      strength12 = -k_sticking * d12_diff * Math.pow(neighbourDistTol-Math.abs(d12_diff),2) * damping_factor;
+                    }
                     this.x1force.scaleAdd(strength12, axis12, this.x1force);
                     neighbour_bac.x2force.scaleAdd(-strength12, axis12, neighbour_bac.x2force);
 
-                    double strength21 = -k_sticking * (d21 - stickingRestLong) * damping_factor;
+                    double strength21 = 0;
+                    if (Math.abs(d21_diff) < neighbourDistTol){
+                      strength21 = -k_sticking * d21_diff * Math.pow(neighbourDistTol-Math.abs(d21_diff),2) * damping_factor;
+                    }
                     this.x2force.scaleAdd(strength21, axis21, this.x2force);
                     neighbour_bac.x1force.scaleAdd(-strength21, axis21, neighbour_bac.x1force);
-                } else {
+
+                  } else {
+                    double d11_diff = (d11 - stickingRestLong);
+                    double d22_diff = (d22 - stickingRestLong);
+                    double d12_diff = (d12 - stickingRestShort);
+                    double d21_diff = (d21 - stickingRestShort);
                     // if cells are oriented opposite direction
-                    double strength11 = -k_sticking * (d11 - stickingRestLong) * damping_factor;
+                    double strength11 = 0;
+                    if (Math.abs(d11_diff) < neighbourDistTol){
+                      strength11 = -k_sticking * d11_diff * Math.pow(neighbourDistTol-Math.abs(d11_diff),2) * damping_factor;
+                    }
                     this.x1force.scaleAdd(strength11, axis11, this.x1force);
                     neighbour_bac.x1force.scaleAdd(-strength11, axis11, neighbour_bac.x1force);
 
-                    double strength22 = -k_sticking * (d22 - stickingRestLong) * damping_factor;
+                    double strength22 = 0;
+                    if (Math.abs(d22_diff) < neighbourDistTol){
+                      strength22 = -k_sticking * d22_diff * Math.pow(neighbourDistTol-Math.abs(d22_diff),2) * damping_factor;
+                    }
                     this.x2force.scaleAdd(strength22, axis22, this.x2force);
                     neighbour_bac.x2force.scaleAdd(-strength22, axis22, neighbour_bac.x2force);
 
-                    double strength12 = -k_sticking * (d12 - stickingRestShort) * damping_factor;
+                    double strength12 = 0;
+                    if (Math.abs(d12_diff) < neighbourDistTol){
+                      strength12 = -k_sticking * d12_diff * Math.pow(neighbourDistTol-Math.abs(d12_diff),2) * damping_factor;
+                    }
                     this.x1force.scaleAdd(strength12, axis12, this.x1force);
                     neighbour_bac.x2force.scaleAdd(-strength12, axis12, neighbour_bac.x2force);
 
-                    double strength21 = -k_sticking * (d21 - stickingRestShort) * damping_factor;
+                    double strength21 = 0;
+                    if (Math.abs(d21_diff) < neighbourDistTol){
+                      strength21 = -k_sticking * d21_diff * Math.pow(neighbourDistTol-Math.abs(d21_diff),2) * damping_factor;
+                    }
                     this.x2force.scaleAdd(strength21, axis21, this.x2force);
                     neighbour_bac.x1force.scaleAdd(-strength21, axis21, neighbour_bac.x1force);
+
                 }
 
 
