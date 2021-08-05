@@ -131,7 +131,6 @@ public class BasicSimulation2D {
         double k_int = parameters.k_int;
         double k_cell = parameters.k_cell;
         double k_sticking = parameters.k_sticking;
-        double range_sticking = parameters.range_sticking;
         double twist = parameters.twist;
         double push = parameters.push;
         double asymmetry = parameters.asymmetry;
@@ -143,7 +142,6 @@ public class BasicSimulation2D {
         BSimCapsuleBacterium.setIntForce(k_int);
         BSimCapsuleBacterium.setCellForce(k_cell);
         BSimCapsuleBacterium.setStickForce(k_sticking);
-        BSimCapsuleBacterium.setStickingRange(range_sticking);
         BSimCapsuleBacterium.setContactRange(contact_range);
         BSimCapsuleBacterium.setContactThreshold(contact_threshold);
 
