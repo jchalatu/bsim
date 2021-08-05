@@ -83,18 +83,13 @@ public class Parameters {
     @Parameter(names="-k_stick",arity=1,description = "side-to-side attraction")
     public static double k_sticking = 0.01;
 
-    //*************************************************************** HOW ARE THESE DIFFERENT
-    // sticking range
-    @Parameter(names="-rng_stick",arity=1,description = "max range side-to-side attraction")
-    public static double range_sticking = 5.0;
+
     // contact threshold (for sticking force)
     @Parameter(names="-contact_thresh",arity=1,description = "contact threshold for sticking interaction")
-    public static double contact_threshold = 4.0;
-    //*****************************************************************************************************
-
+    public static double contact_threshold = 2.0;
     // contact range extension (pilus length)
     @Parameter(names="-contact_rng",arity=1,description = "contact range for pilus interaction")
-    public static double contact_range = 0.25;
+    public static double contact_range = 0.2;
 
     // twist
     @Parameter(names="-twist",arity=1,description = "twist")
@@ -102,10 +97,6 @@ public class Parameters {
     // push
     @Parameter(names="-push",arity=1,description = "push")
     public static double push = 0.05;
-
-    // asymmetric growth threshold
-    @Parameter(names="-l_asym",arity=1,description = "asymmetric growth threshold")
-    public static double L_asym = 3.75;
     // value of asymmetry
     @Parameter(names="-asym",arity=1,description = "asymmetry")
     public static double asymmetry = 0.5;
