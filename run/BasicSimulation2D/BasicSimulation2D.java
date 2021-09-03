@@ -29,8 +29,8 @@ public class BasicSimulation2D {
         new JCommander(bsim_parameters, args);
 
         // begins simulation
-        // run(bsim_parameters);
-        multithreading(args);
+        run(bsim_parameters);
+        // multithreading(args);
     }
 
     // a multithreaded version of main; this runs 5 simulations concurrently
@@ -268,7 +268,10 @@ public class BasicSimulation2D {
             /*********************************************************
              * Set up the drawer
              */
-            BasicDrawer drawer = new BasicDrawer(sim, 800, 600, pixel_to_um_ratio, bac);
+            int plotX = (int) Math.round(simX*pixel_to_um_ratio);
+            int plotY = (int) Math.round(simY*pixel_to_um_ratio);
+
+            BasicDrawer drawer = new BasicDrawer(sim, plotX, plotY, pixel_to_um_ratio, bac);
             sim.setDrawer(drawer);
 
 
@@ -281,7 +284,7 @@ public class BasicSimulation2D {
             /** Export a video of the simulation */
             BSimMovExporter videoExporter = new BSimMovExporter(sim, drawer, filePath + "video.mp4" );
             videoExporter.setSpeed(1); // the number of simulation time units played in one second
-            videoExporter.setDt(0.01); // this is how often (in simulation time) it will output a frame for the video
+            videoExporter.setDt(export_time); // this is how often (in simulation time) it will output a frame for the video
             sim.addExporter(videoExporter);
 
 

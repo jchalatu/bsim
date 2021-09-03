@@ -78,7 +78,7 @@ public class BasicTicker extends BSimTicker {
 
         long endTimeAction = System.nanoTime();
         if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-            // System.out.println("Action update for " + bacteriaAll.size() + " bacteria took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
+            System.out.println("Action update for " + bacteriaAll.size() + " bacteria took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
         }  //outputing how long each step took, once every log interval.
 
         // ********************************************** Chemical fields
@@ -88,7 +88,7 @@ public class BasicTicker extends BSimTicker {
 
         endTimeAction = System.nanoTime();
         if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-            // System.out.println("Chemical field update took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
+            System.out.println("Chemical field update took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
         }
 
         // ********************************************** Growth related activities if enabled.
@@ -120,7 +120,7 @@ public class BasicTicker extends BSimTicker {
 
             endTimeAction = System.nanoTime();
             if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                // System.out.println("Growth and division took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
+                System.out.println("Growth and division took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
             }
             //above: prints out information abt bacteria when u want it to
             // ********************************************** Neighbour interactions
@@ -130,7 +130,7 @@ public class BasicTicker extends BSimTicker {
 
             endTimeAction = System.nanoTime();
             if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                // System.out.println("Wall and neighbour interactions took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
+                System.out.println("Wall and neighbour interactions took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
             }
 
             // ********************************************** Boundaries/removal
@@ -155,7 +155,7 @@ public class BasicTicker extends BSimTicker {
 
             endTimeAction = System.nanoTime();
             if ((sim.getTimestep() % LOG_INTERVAL) == 0) {
-                // System.out.println("Death and removal took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
+                System.out.println("Death and removal took " + (endTimeAction - startTimeAction) / 1e6 + " ms.");
             }
         }
 
