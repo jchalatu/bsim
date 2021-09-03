@@ -14,7 +14,7 @@ module load opencv
 #module load java/13.0.2 #loaded AFTER StdEnv which make 13.0.2 available over 13.0.1 
 
 
-export BSIM_HOME=$PWD
+export BSIM_DIR=$PWD
 alias bsim-build='ant -f $BSIM_HOME/bsim-build-tree.xml'
 
 echo "Done."
