@@ -77,30 +77,30 @@ public class Parameters {
     @Parameter(names="-k_int",arity=1,description = "internal force")
     public static double k_int = 50.0;
     // cell-cell collision force
-    @Parameter(names="-k_cell",arity=1,description = "cell-cell collision force")
-    public static double k_cell = 500.0;
+    @Parameter(names="-k_overlap",arity=1,description = "cell-cell collision force")
+    public static double k_overlap = 500.0;
     // sticking force
     @Parameter(names="-k_stick",arity=1,description = "side-to-side attraction")
     public static double k_sticking = 0.01;
 
 
     // contact threshold (for sticking force)
-    @Parameter(names="-contact_thresh",arity=1,description = "contact threshold for sticking interaction")
-    public static double contact_threshold = 2.0;
+    @Parameter(names="-contact_damping",arity=1,description = "contact threshold for sticking interaction")
+    public static double contact_damping = 2.0;
     // contact range extension (pilus length)
     @Parameter(names="-contact_rng",arity=1,description = "contact range for pilus interaction")
-    public static double contact_range = 0.2;
+    public static double contact_range = 0.25;
 
     // twist
-    @Parameter(names="-twist",arity=1,description = "twist")
-    public static double twist = 0.1;
+    @Parameter(names="-birth_twist",arity=1, description = "twist")
+    public static double birth_twist = 0.25;
     // push
     @Parameter(names="-push",arity=1,description = "push")
     public static double push = 0.05;
-    // value of asymmetry
-    @Parameter(names="-asym",arity=1,description = "asymmetry")
-    public static double asymmetry = 0.5;
-    // symmetric growth
-    @Parameter(names="-asym_scale",arity=1,description = "asymmetry scale")
+    // initial degree of asymmetrical growth
+    @Parameter(names="-init_growth_asym",arity=1,description = "initital asymmetry")
+    public static double init_growth_asym = 0.5;
+    // length scale at which asymmetrical growth stops
+    @Parameter(names="-asymmetry_scale",arity=1,description = "asymmetry scale")
     public static double asymmetry_scale = 0.75;
 }
