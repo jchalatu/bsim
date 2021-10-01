@@ -6,12 +6,13 @@
 
 echo "Setting up BSim environment..."
 module load ant
-module load openmpi #change this to most updated environment
-module load mpi4py #needed for multiprocessing in python and AstroABC code
+module load openmpi
+module load mpi4py #needed for multiprocessing in python and abc code
 module load StdEnv/2020 
 module load scipy-stack/2020b
 module load opencv
-#module load java/13.0.2 #loaded AFTER StdEnv which make 13.0.2 available over 13.0.1 
+
+source $HPC_BSIM/python-env.sh
 
 
 export BSIM_DIR=$PWD
