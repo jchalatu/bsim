@@ -1,4 +1,5 @@
 OUTDIR=`pwd -P`
+
 BSIM_DIR=$(echo "$OUTDIR" | sed -e 's|/test||')
 EXPORTPATH="${OUTDIR}/test_output"
 FOLDER='benchmarking'
